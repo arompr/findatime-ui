@@ -1,0 +1,90 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@source "../node_modules/@ilamy/calendar/dist";
+
+:root {
+  --radius: 0.5rem;
+
+  --background: #ffffff;
+  --foreground: #0f172a;
+
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+
+  --primary: #0f172a;
+  --primary-foreground: #f8fafc;
+
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+
+  --accent: #f1f5f9;
+  --accent-foreground: #0f172a;
+
+  --destructive: #dc2626;
+  --destructive-foreground: #f8fafc;
+
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #94a3b8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply antialiased text-slate-900;
+}
+
+.droppable-cell {
+  cursor: cell;
+}
+
+/* @ilamy/calendar insets event wrappers by a --spacing-based gap; zero it so
+   blocks fill the full day column / month cell. Scoped to wrappers only, so
+   grid padding and the current-time marker keep their spacing scale. */
+[data-testid^="vertical-events-"] > div:not([data-testid]),
+[data-testid^="horizontal-event-"] {
+  --spacing: 0px;
+}
+
+/* @ilamy/calendar marks sub-hour slots (15-min intervals) with dashed
+   separators; hide them for a cleaner grid. Hour boundaries are drawn by the
+   grid gap and are unaffected. */
+[data-testid^="vertical-cell-"][class~="border-dashed"] {
+  border-bottom-style: none;
+}
