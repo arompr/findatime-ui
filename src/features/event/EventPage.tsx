@@ -42,7 +42,8 @@ export function EventPage({ publicId }: EventPageProps) {
               Your availability
             </h2>
             <p className="mb-4 text-sm text-slate-500">
-              Click or drag to mark when you&apos;re free. Hover a block to delete it.
+              Click or drag to mark when you&apos;re free. Drag a block to move it,
+              drag its edges to resize it, or hover to delete it.
             </p>
             <AvailabilityWeek publicId={publicId} />
           </div>

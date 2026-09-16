@@ -88,3 +88,19 @@ body {
 [data-testid^="vertical-cell-"][class~="border-dashed"] {
   border-bottom-style: none;
 }
+
+/* Others' availability is rendered as a cell-level heat map (see
+   getCellClassName in AvailabilityWeek), so it always spans the full day
+   column and never shifts when the current user's blocks overlap it. */
+.findatime-heat-1 {
+  background-color: rgba(22, 163, 74, 0.18);
+}
+.findatime-heat-2 {
+  background-color: rgba(22, 163, 74, 0.36);
+}
+.findatime-heat-3 {
+  background-color: rgba(22, 163, 74, 0.54);
+}
+.findatime-heat-4 {
+  background-color: rgba(22, 163, 74, 0.72);
+}

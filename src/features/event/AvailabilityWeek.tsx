@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useSyncExternalStore } from "react";
+import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
 import { IlamyCalendar } from "@ilamy/calendar";
 import type { CalendarEvent, CellInfo, IlamyCalendarProps } from "@ilamy/calendar";
@@ -12,11 +13,23 @@ import {
   subscribeAvailability,
   type AvailabilitySelectionInput,
 } from "@/lib/availability";
+import { buildDensitySegments } from "@/lib/availability-density";
+import { getOtherAvailability } from "./otherAvailability";
+import { availabilityResizePlugin } from "./availabilityResizePlugin";
 import { CalendarHeader } from "./components/CalendarHeader";
 
 type AvailabilityWeekProps = {
   publicId: string;
 };
+
+const DAY_START_MINUTES = 9 * 60;
+const DAY_END_MINUTES = 17 * 60;
+
+function toClock(minutes: number): string {
+  const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
+  const mins = String(minutes % 60).padStart(2, "0");
+  return `${hours}:${mins}`;
+}
 
 function useSelections(publicId: string) {
   return useSyncExternalStore(subscribeAvailability, () => getSelections(publicId));
@@ -49,12 +62,44 @@ function rangeToSelections(start: Dayjs, end: Dayjs): AvailabilitySelectionInput
 }
 
 type AvailabilityBlockProps = {
+  id: string;
+  startUtc: string;
+  endUtc: string;
   onDelete: () => void;
 };
 
-function AvailabilityBlock({ onDelete }: AvailabilityBlockProps) {
+function AvailabilityBlock({ id, startUtc, endUtc, onDelete }: AvailabilityBlockProps) {
   return (
-    <div className="group relative h-full w-full rounded-sm border border-green-600 bg-green-500/20">
+    <div
+      className="group relative h-full w-full [--spacing:0.25rem] cursor-grab rounded-sm border border-green-600 bg-green-500/20 transition-colors hover:border-green-700"
+      data-availability-id={id}
+      data-availability-start={startUtc}
+      data-availability-end={endUtc}
+    >
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-[2px] flex justify-center opacity-0 transition-opacity group-hover:opacity-100"
+      >
+        <span className="h-[3px] w-6 rounded-full bg-green-700" />
+      </span>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-[2px] flex justify-center opacity-0 transition-opacity group-hover:opacity-100"
+      >
+        <span className="h-[3px] w-6 rounded-full bg-green-700" />
+      </span>
+      <span
+        aria-hidden="true"
+        className="group/top absolute inset-x-0 top-0 h-2 max-h-[33%] cursor-ns-resize"
+      >
+        <span className="pointer-events-none absolute inset-x-0 top-0 h-[3px] rounded-b-sm bg-green-700 opacity-0 transition-opacity group-hover/top:opacity-100" />
+      </span>
+      <span
+        aria-hidden="true"
+        className="group/bottom absolute inset-x-0 bottom-0 h-2 max-h-[33%] cursor-ns-resize"
+      >
+        <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] rounded-t-sm bg-green-700 opacity-0 transition-opacity group-hover/bottom:opacity-100" />
+      </span>
       <button
         type="button"
         aria-label="Delete availability"
@@ -71,6 +116,29 @@ function AvailabilityBlock({ onDelete }: AvailabilityBlockProps) {
   );
 }
 
+type DensitySegmentMs = {
+  startMs: number;
+  endMs: number;
+  count: number;
+};
+
+function densityAt(segments: DensitySegmentMs[], timeMs: number): number {
+  let low = 0;
+  let high = segments.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const segment = segments[mid];
+    if (timeMs < segment.startMs) {
+      high = mid - 1;
+    } else if (timeMs >= segment.endMs) {
+      low = mid + 1;
+    } else {
+      return segment.count;
+    }
+  }
+  return 0;
+}
+
 export function AvailabilityWeek({ publicId }: AvailabilityWeekProps) {
   const selections = useSelections(publicId);
 
@@ -85,9 +153,32 @@ export function AvailabilityWeek({ publicId }: AvailabilityWeekProps) {
     [selections],
   );
 
+  const densitySegments = useMemo(
+    () =>
+      buildDensitySegments(getOtherAvailability()).map((segment) => ({
+        startMs: dayjs(segment.startUtc).valueOf(),
+        endMs: dayjs(segment.endUtc).valueOf(),
+        count: segment.count,
+      })),
+    [],
+  );
+
+  const getCellClassName = useCallback(
+    (info: CellInfo) => {
+      const count = densityAt(densitySegments, info.start.valueOf());
+      return count > 0 ? `findatime-heat-${Math.min(count, 4)}` : "";
+    },
+    [densitySegments],
+  );
+
   const renderEvent = useCallback(
     (event: CalendarEvent) => (
-      <AvailabilityBlock onDelete={() => removeSelection(publicId, String(event.id))} />
+      <AvailabilityBlock
+        id={String(event.id)}
+        startUtc={event.start.toISOString()}
+        endUtc={event.end.toISOString()}
+        onDelete={() => removeSelection(publicId, String(event.id))}
+      />
     ),
     [publicId],
   );
@@ -98,6 +189,12 @@ export function AvailabilityWeek({ publicId }: AvailabilityWeekProps) {
         onSelect: (selection) => {
           addSelections(publicId, rangeToSelections(selection.start, selection.end));
         },
+      }),
+      availabilityResizePlugin({
+        publicId,
+        slotDurationMinutes: 15,
+        dayStartMinutes: DAY_START_MINUTES,
+        dayEndMinutes: DAY_END_MINUTES,
       }),
     ],
     [publicId],
@@ -117,6 +214,7 @@ export function AvailabilityWeek({ publicId }: AvailabilityWeekProps) {
       <IlamyCalendar
         events={committedEvents}
         renderEvent={renderEvent}
+        getCellClassName={getCellClassName}
         plugins={plugins}
         onCellClick={handleCellClick}
         headerComponent={<CalendarHeader />}
@@ -135,8 +233,8 @@ export function AvailabilityWeek({ publicId }: AvailabilityWeekProps) {
             "saturday",
             "sunday",
           ],
-          startTime: "09:00",
-          endTime: "17:00",
+          startTime: toClock(DAY_START_MINUTES),
+          endTime: toClock(DAY_END_MINUTES),
         }}
         hideNonBusinessHours
         disableEventClick

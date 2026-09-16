@@ -9,6 +9,7 @@ export type AvailabilitySelection = {
 export type AvailabilitySelectionInput = {
   startUtc: string;
   endUtc: string;
+  id?: string;
 };
 
 type Listener = () => void;
@@ -57,7 +58,7 @@ function mergeSelections(
     push(selection.startUtc, selection.endUtc, selection.id);
   }
   for (const selection of added) {
-    push(selection.startUtc, selection.endUtc);
+    push(selection.startUtc, selection.endUtc, selection.id);
   }
 
   const result: AvailabilitySelection[] = [];
@@ -102,4 +103,45 @@ export function removeSelection(publicId: string, id: string): void {
     getSelections(publicId).filter((selection) => selection.id !== id),
   );
   emit();
+}
+
+function setSelectionRange(
+  publicId: string,
+  id: string,
+  newStartUtc: string,
+  newEndUtc: string,
+): void {
+  const start = dayjs(newStartUtc);
+  const end = dayjs(newEndUtc);
+  const others = getSelections(publicId).filter((selection) => selection.id !== id);
+  if (!start.isBefore(end)) {
+    selectionsByEvent.set(publicId, others);
+    emit();
+    return;
+  }
+  selectionsByEvent.set(
+    publicId,
+    mergeSelections(others, [
+      { id, startUtc: start.toISOString(), endUtc: end.toISOString() },
+    ]),
+  );
+  emit();
+}
+
+export function resizeSelection(
+  publicId: string,
+  id: string,
+  newStartUtc: string,
+  newEndUtc: string,
+): void {
+  setSelectionRange(publicId, id, newStartUtc, newEndUtc);
+}
+
+export function moveSelection(
+  publicId: string,
+  id: string,
+  newStartUtc: string,
+  newEndUtc: string,
+): void {
+  setSelectionRange(publicId, id, newStartUtc, newEndUtc);
 }
