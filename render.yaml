@@ -2,7 +2,7 @@ services:
   - type: web
     name: findatime-ui-staging
     runtime: static
-    branch: main
+    branch: develop
     buildCommand: |
       test -n "$GITHUB_TOKEN" || { echo "GITHUB_TOKEN env var is required"; exit 1; }
       cat > .npmrc <<EOF
