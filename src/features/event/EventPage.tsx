@@ -38,13 +38,9 @@ export function EventPage({ publicId }: EventPageProps) {
           </div>
 
           <div className="mt-8 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="mb-1 text-lg font-semibold tracking-tight text-slate-900">
+            <h2 className="mb-2 text-lg font-semibold tracking-tight text-slate-900">
               Your availability
             </h2>
-            <p className="mb-4 text-sm text-slate-500">
-              Click or drag to mark when you&apos;re free. Drag a block to move it,
-              drag its edges to resize it, or hover to delete it.
-            </p>
             <AvailabilityWeek publicId={publicId} />
           </div>
         </>

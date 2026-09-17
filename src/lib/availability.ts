@@ -97,6 +97,14 @@ export function addSelections(
   emit();
 }
 
+export function setSelections(
+  publicId: string,
+  ranges: AvailabilitySelectionInput[],
+): void {
+  selectionsByEvent.set(publicId, mergeSelections([], ranges));
+  emit();
+}
+
 export function removeSelection(publicId: string, id: string): void {
   selectionsByEvent.set(
     publicId,

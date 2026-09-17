@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSyncExternalStore } from "react";
 import dayjs from "dayjs";
 import type { Dayjs } from "dayjs";
@@ -10,13 +10,22 @@ import {
   addSelections,
   getSelections,
   removeSelection,
+  setSelections,
   subscribeAvailability,
   type AvailabilitySelectionInput,
 } from "@/lib/availability";
 import { buildDensitySegments } from "@/lib/availability-density";
-import { getOtherAvailability } from "./otherAvailability";
+import { hasSavedAvailability } from "@/lib/availability-storage";
+import { messageFor } from "@/lib/errors";
+import { getGuestId } from "@/lib/guestId";
+import {
+  useAllAvailability,
+  useMySavedAvailability,
+  useSaveAvailability,
+} from "@/features/home/event-queries";
 import { availabilityResizePlugin } from "./availabilityResizePlugin";
 import { CalendarHeader } from "./components/CalendarHeader";
+import { EditToggle, type AvailabilityMode } from "./components/EditToggle";
 
 type AvailabilityWeekProps = {
   publicId: string;
@@ -140,28 +149,47 @@ function densityAt(segments: DensitySegmentMs[], timeMs: number): number {
 }
 
 export function AvailabilityWeek({ publicId }: AvailabilityWeekProps) {
+  const guestId = getGuestId();
   const selections = useSelections(publicId);
+  const savedQuery = useMySavedAvailability(publicId);
+  const allQuery = useAllAvailability(publicId);
+  const saveMutation = useSaveAvailability();
+
+  const [mode, setMode] = useState<AvailabilityMode | null>(null);
+
+  const saved = savedQuery.data;
+
+  useEffect(() => {
+    if (mode !== null || saved === undefined) return;
+    setSelections(publicId, saved);
+    setMode(hasSavedAvailability(publicId, guestId) ? "read" : "edit");
+  }, [mode, saved, publicId, guestId]);
 
   const committedEvents: NonNullable<IlamyCalendarProps["events"]> = useMemo(
     () =>
-      selections.map((selection) => ({
-        id: selection.id,
-        title: "",
-        start: selection.startUtc,
-        end: selection.endUtc,
-      })),
-    [selections],
+      mode === "edit"
+        ? selections.map((selection) => ({
+            id: selection.id,
+            title: "",
+            start: selection.startUtc,
+            end: selection.endUtc,
+          }))
+        : [],
+    [mode, selections],
   );
 
-  const densitySegments = useMemo(
-    () =>
-      buildDensitySegments(getOtherAvailability()).map((segment) => ({
-        startMs: dayjs(segment.startUtc).valueOf(),
-        endMs: dayjs(segment.endUtc).valueOf(),
-        count: segment.count,
-      })),
-    [],
-  );
+  const densitySegments = useMemo(() => {
+    const others = allQuery.data?.others ?? [];
+    const everyone =
+      mode === "read"
+        ? [...others, { id: "__me__", name: "You", ranges: allQuery.data?.me ?? [] }]
+        : others;
+    return buildDensitySegments(everyone).map((segment) => ({
+      startMs: dayjs(segment.startUtc).valueOf(),
+      endMs: dayjs(segment.endUtc).valueOf(),
+      count: segment.count,
+    }));
+  }, [allQuery.data, mode]);
 
   const getCellClassName = useCallback(
     (info: CellInfo) => {
@@ -184,20 +212,26 @@ export function AvailabilityWeek({ publicId }: AvailabilityWeekProps) {
   );
 
   const plugins = useMemo(
-    () => [
-      dragToCreatePlugin({
-        onSelect: (selection) => {
-          addSelections(publicId, rangeToSelections(selection.start, selection.end));
-        },
-      }),
-      availabilityResizePlugin({
-        publicId,
-        slotDurationMinutes: 15,
-        dayStartMinutes: DAY_START_MINUTES,
-        dayEndMinutes: DAY_END_MINUTES,
-      }),
-    ],
-    [publicId],
+    () =>
+      mode === "edit"
+        ? [
+            dragToCreatePlugin({
+              onSelect: (selection) => {
+                addSelections(
+                  publicId,
+                  rangeToSelections(selection.start, selection.end),
+                );
+              },
+            }),
+            availabilityResizePlugin({
+              publicId,
+              slotDurationMinutes: 15,
+              dayStartMinutes: DAY_START_MINUTES,
+              dayEndMinutes: DAY_END_MINUTES,
+            }),
+          ]
+        : [],
+    [mode, publicId],
   );
 
   const handleCellClick = useCallback(
@@ -209,37 +243,66 @@ export function AvailabilityWeek({ publicId }: AvailabilityWeekProps) {
     [publicId],
   );
 
+  const handleSave = () => {
+    saveMutation.mutate(
+      { publicId, ranges: selections },
+      {
+        onSuccess: () => {
+          setMode("read");
+        },
+      },
+    );
+  };
+
+  if (mode === null) {
+    return <div className="h-[560px]" />;
+  }
+
   return (
-    <div className="h-[560px]">
-      <IlamyCalendar
-        events={committedEvents}
-        renderEvent={renderEvent}
-        getCellClassName={getCellClassName}
-        plugins={plugins}
-        onCellClick={handleCellClick}
-        headerComponent={<CalendarHeader />}
-        initialView="week"
-        firstDayOfWeek="monday"
-        slotDuration={15}
-        timeFormat="12-hour"
-        hiddenDays={[]}
-        businessHours={{
-          daysOfWeek: [
-            "monday",
-            "tuesday",
-            "wednesday",
-            "thursday",
-            "friday",
-            "saturday",
-            "sunday",
-          ],
-          startTime: toClock(DAY_START_MINUTES),
-          endTime: toClock(DAY_END_MINUTES),
-        }}
-        hideNonBusinessHours
-        disableEventClick
-        disableDragAndDrop
-        eventSpacing={0}
+    <div>
+      <div className={`h-[560px] ${mode === "read" ? "findatime-readonly" : ""}`}>
+        <IlamyCalendar
+          events={committedEvents}
+          renderEvent={renderEvent}
+          getCellClassName={getCellClassName}
+          plugins={plugins}
+          onCellClick={handleCellClick}
+          disableCellClick={mode !== "edit"}
+          headerComponent={<CalendarHeader />}
+          initialView="week"
+          firstDayOfWeek="monday"
+          slotDuration={15}
+          timeFormat="12-hour"
+          hiddenDays={[]}
+          businessHours={{
+            daysOfWeek: [
+              "monday",
+              "tuesday",
+              "wednesday",
+              "thursday",
+              "friday",
+              "saturday",
+              "sunday",
+            ],
+            startTime: toClock(DAY_START_MINUTES),
+            endTime: toClock(DAY_END_MINUTES),
+          }}
+          hideNonBusinessHours
+          disableEventClick
+          disableDragAndDrop
+          eventSpacing={0}
+        />
+      </div>
+      <EditToggle
+        mode={mode}
+        saving={saveMutation.isPending}
+        error={
+          saveMutation.isError
+            ? messageFor(saveMutation.error, "Could not save your availability.")
+            : undefined
+        }
+        onEdit={() => setMode("edit")}
+        onSave={handleSave}
       />
     </div>
   );

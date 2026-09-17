@@ -104,3 +104,22 @@ body {
 .findatime-heat-4 {
   background-color: rgba(22, 163, 74, 0.72);
 }
+
+/* In read mode the calendar is non-interactive; strip ilamy hover
+   affordances (cell backgrounds, day-header buttons, "+ N more" link) so
+   nothing suggests clickability. Selectors are written against Tailwind's
+   emitted utility classes with the .findatime-readonly ancestor to win on
+   specificity without `!important`. CalendarHeader navigation buttons use
+   slate-100 and are intentionally left interactive. */
+.findatime-readonly [class~="hover:bg-accent"]:hover,
+.findatime-readonly .hover\:bg-accent:hover {
+  background-color: transparent;
+}
+.findatime-readonly [class~="hover:text-foreground"]:hover,
+.findatime-readonly .hover\:text-foreground:hover {
+  color: inherit;
+}
+.findatime-readonly [class~="hover:bg-accent"],
+.findatime-readonly .hover\:bg-accent {
+  cursor: default;
+}
