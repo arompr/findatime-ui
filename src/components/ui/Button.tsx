@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from "react";
+import { Loader2 } from "lucide-react";
 
 type Variant = "primary" | "secondary" | "ghost";
 
@@ -26,10 +27,10 @@ export function Button({
   return (
     <button
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 ${styles[variant]} ${className}`}
+      className={`inline-flex min-h-10 cursor-pointer items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:cursor-default ${styles[variant]} ${className}`}
       {...props}
     >
-      {loading && <span aria-hidden>...</span>}
+      {loading && <Loader2 className="size-4 animate-spin" aria-hidden />}
       {children}
     </button>
   );

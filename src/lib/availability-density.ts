@@ -1,53 +1,71 @@
 import dayjs from "dayjs";
-import type { OtherAvailability } from "@/features/event/otherAvailability";
+import type { AvailabilityRange } from "./availability";
 
 export type DensitySegment = {
-  startUtc: string;
-  endUtc: string;
+  startMs: number;
+  endMs: number;
   count: number;
 };
 
-export function buildDensitySegments(
-  others: OtherAvailability[],
-): DensitySegment[] {
-  const events = others.flatMap((user) =>
-    user.ranges.map((r) => ({
-      start: dayjs(r.startUtc).valueOf(),
-      end: dayjs(r.endUtc).valueOf(),
+type RangeHolder = {
+  ranges: AvailabilityRange[];
+};
+
+/**
+ * Sweeps the union of all participants' ranges and produces contiguous
+ * segments annotated with how many participants are available throughout
+ * each segment.
+ */
+export function buildDensitySegments(participants: RangeHolder[]): DensitySegment[] {
+  const ranges = participants.flatMap((participant) =>
+    participant.ranges.map((range) => ({
+      start: dayjs(range.startUtc).valueOf(),
+      end: dayjs(range.endUtc).valueOf(),
     })),
   );
-  if (events.length === 0) return [];
+  if (ranges.length === 0) return [];
 
-  const points = new Set<number>();
-  for (const event of events) {
-    points.add(event.start);
-    points.add(event.end);
-  }
-  const boundaries = [...points].sort((a, b) => a - b);
+  const boundaries = [...new Set(ranges.flatMap((r) => [r.start, r.end]))].sort(
+    (a, b) => a - b,
+  );
 
   const segments: DensitySegment[] = [];
   for (let i = 0; i < boundaries.length - 1; i++) {
-    const segStart = boundaries[i];
-    const segEnd = boundaries[i + 1];
-    if (segEnd <= segStart) continue;
+    const startMs = boundaries[i];
+    const endMs = boundaries[i + 1];
+    if (endMs <= startMs) continue;
 
     let count = 0;
-    for (const event of events) {
-      if (event.start <= segStart && event.end >= segEnd) count++;
+    for (const range of ranges) {
+      if (range.start <= startMs && range.end >= endMs) count++;
     }
     if (count === 0) continue;
 
     const prev = segments[segments.length - 1];
-    if (prev && prev.count === count && prev.endUtc === dayjs(segStart).toISOString()) {
-      prev.endUtc = dayjs(segEnd).toISOString();
+    if (prev && prev.count === count && prev.endMs === startMs) {
+      prev.endMs = endMs;
     } else {
-      segments.push({
-        startUtc: dayjs(segStart).toISOString(),
-        endUtc: dayjs(segEnd).toISOString(),
-        count,
-      });
+      segments.push({ startMs, endMs, count });
     }
   }
 
   return segments;
+}
+
+/** Number of participants available at `timeMs`, or 0. */
+export function densityAt(segments: DensitySegment[], timeMs: number): number {
+  let low = 0;
+  let high = segments.length - 1;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    const segment = segments[mid];
+    if (timeMs < segment.startMs) {
+      high = mid - 1;
+    } else if (timeMs >= segment.endMs) {
+      low = mid + 1;
+    } else {
+      return segment.count;
+    }
+  }
+  return 0;
 }

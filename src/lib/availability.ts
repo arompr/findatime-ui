@@ -1,14 +1,16 @@
 import dayjs from "dayjs";
 
-export type AvailabilitySelection = {
-  id: string;
+/** An availability range as an absolute UTC ISO instant pair. */
+export type AvailabilityRange = {
   startUtc: string;
   endUtc: string;
 };
 
-export type AvailabilitySelectionInput = {
-  startUtc: string;
-  endUtc: string;
+export type AvailabilitySelection = AvailabilityRange & {
+  id: string;
+};
+
+export type AvailabilitySelectionInput = AvailabilityRange & {
   id?: string;
 };
 
@@ -102,6 +104,11 @@ export function setSelections(
   ranges: AvailabilitySelectionInput[],
 ): void {
   selectionsByEvent.set(publicId, mergeSelections([], ranges));
+  emit();
+}
+
+export function clearSelections(publicId: string): void {
+  selectionsByEvent.delete(publicId);
   emit();
 }
 

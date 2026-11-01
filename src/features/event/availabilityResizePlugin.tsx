@@ -19,11 +19,13 @@ type Mode = "resize-start" | "resize-end" | "move";
 
 type PressState = {
   pointerId: number;
+  isTouch: boolean;
   selectionId: string;
   startMs: number;
   endMs: number;
   mode: Mode;
   blockRect: DOMRect;
+  originClientX: number;
   originClientY: number;
   element: HTMLElement;
   active: boolean;
@@ -45,6 +47,10 @@ type Computed = {
 };
 
 const EDGE_PX = 8;
+const EDGE_PX_TOUCH = 22;
+const DRAG_THRESHOLD_PX = 4;
+const TOUCH_SLOP_PX = 10;
+const TOUCH_LONG_PRESS_MS = 380;
 const MIN_BLOCK_PX = 2;
 
 function snapDeltaMin(deltaPx: number, pxPerMinute: number, slotMinutes: number): number {
@@ -139,23 +145,53 @@ function AvailabilityResizeProvider({
 }) {
   const [preview, setPreview] = useState<PreviewRect | null>(null);
   const pressRef = useRef<PressState | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
   useEffect(() => {
-    const threshold = 4;
+    const clearLongPressTimer = () => {
+      if (longPressTimerRef.current !== null) {
+        window.clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
 
     const resetBodyStyles = () => {
       document.body.style.removeProperty("user-select");
       document.body.style.removeProperty("-webkit-user-select");
     };
 
+    const releaseElement = (press: PressState) => {
+      press.element.style.opacity = "";
+      press.element.style.touchAction = "";
+    };
+
     const clear = () => {
+      clearLongPressTimer();
       const press = pressRef.current;
-      if (press) press.element.style.opacity = "";
+      if (press) releaseElement(press);
       pressRef.current = null;
       setPreview(null);
       resetBodyStyles();
+    };
+
+    const activate = (press: PressState) => {
+      press.active = true;
+      press.element.style.opacity = "0";
+      document.body.style.setProperty("user-select", "none");
+      document.body.style.setProperty("-webkit-user-select", "none");
+      if (press.isTouch) {
+        // Claim the gesture: without this the browser pans/zooms the page
+        // while the block is being dragged.
+        press.element.style.touchAction = "none";
+        window.navigator.vibrate?.(12);
+      }
+    };
+
+    // While a drag is active, suppress the browser's own touch scrolling.
+    const blockTouchScroll = (event: TouchEvent) => {
+      if (pressRef.current?.active) event.preventDefault();
     };
 
     const onPointerDown = (event: PointerEvent) => {
@@ -177,7 +213,8 @@ function AvailabilityResizeProvider({
       const rect = element.getBoundingClientRect();
       if (rect.height <= 0) return;
 
-      const edge = Math.min(EDGE_PX, rect.height / 3);
+      const isTouch = event.pointerType === "touch";
+      const edge = Math.min(isTouch ? EDGE_PX_TOUCH : EDGE_PX, rect.height / 3);
       const fromTop = event.clientY - rect.top;
       const fromBottom = rect.bottom - event.clientY;
       let mode: Mode = "move";
@@ -187,17 +224,32 @@ function AvailabilityResizeProvider({
         mode = "resize-end";
       }
 
-      pressRef.current = {
+      clearLongPressTimer();
+      const press: PressState = {
         pointerId: event.pointerId,
+        isTouch,
         selectionId,
         startMs: start.valueOf(),
         endMs: end.valueOf(),
         mode,
         blockRect: rect,
+        originClientX: event.clientX,
         originClientY: event.clientY,
         element,
         active: false,
       };
+      pressRef.current = press;
+
+      if (isTouch) {
+        // Press-and-hold then drag, matching the drag-to-create plugin's touch
+        // model: a quick swipe stays a page scroll, a hold grabs the block.
+        longPressTimerRef.current = window.setTimeout(() => {
+          longPressTimerRef.current = null;
+          if (pressRef.current !== press) return;
+          activate(press);
+          setPreview(compute(press, 0, optionsRef.current).preview);
+        }, TOUCH_LONG_PRESS_MS);
+      }
     };
 
     const onPointerMove = (event: PointerEvent) => {
@@ -205,12 +257,23 @@ function AvailabilityResizeProvider({
       if (!press || event.pointerId !== press.pointerId) return;
 
       const deltaPx = event.clientY - press.originClientY;
+
+      if (press.isTouch && !press.active) {
+        const moved = Math.hypot(
+          event.clientX - press.originClientX,
+          deltaPx,
+        );
+        if (moved >= TOUCH_SLOP_PX) {
+          // The gesture is a scroll, not a hold on the block.
+          clearLongPressTimer();
+          pressRef.current = null;
+        }
+        return;
+      }
+
       if (!press.active) {
-        if (Math.abs(deltaPx) < threshold) return;
-        press.active = true;
-        press.element.style.opacity = "0";
-        document.body.style.setProperty("user-select", "none");
-        document.body.style.setProperty("-webkit-user-select", "none");
+        if (Math.abs(deltaPx) < DRAG_THRESHOLD_PX) return;
+        activate(press);
       }
       setPreview(compute(press, deltaPx, optionsRef.current).preview);
     };
@@ -219,6 +282,7 @@ function AvailabilityResizeProvider({
       const press = pressRef.current;
       if (!press || event.pointerId !== press.pointerId) return;
 
+      clearLongPressTimer();
       const active = press.active;
       const deltaPx = event.clientY - press.originClientY;
       const result = compute(press, deltaPx, optionsRef.current);
@@ -249,7 +313,7 @@ function AvailabilityResizeProvider({
         });
       }
 
-      press.element.style.opacity = "";
+      releaseElement(press);
       setPreview(null);
     };
 
@@ -257,11 +321,14 @@ function AvailabilityResizeProvider({
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
     window.addEventListener("pointercancel", clear);
+    window.addEventListener("touchmove", blockTouchScroll, { passive: false });
     return () => {
+      clearLongPressTimer();
       document.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
       window.removeEventListener("pointercancel", clear);
+      window.removeEventListener("touchmove", blockTouchScroll);
       document.body.style.removeProperty("user-select");
       document.body.style.removeProperty("-webkit-user-select");
     };

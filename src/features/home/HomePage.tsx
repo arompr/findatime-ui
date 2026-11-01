@@ -1,16 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { messageFor } from "@/lib/errors";
-import {
-  useCreateEvent,
-  useEnsureGuestId,
-  useEventByPublicId,
-  useJoinEvent,
-  useMyEvents,
-} from "./event-queries.ts";
-import { Button } from "./components/ui/Button";
+import { useEventByPublicId, useJoinEvent } from "@/features/event/queries";
+import { JoinEventForm } from "@/features/event/components/JoinEventForm";
+import { Button } from "@/components/ui/Button";
+import { useCreateEvent, useEnsureGuestId, useMyEvents } from "./queries.ts";
 import { JoinCodeForm } from "./components/JoinCodeForm";
-import { JoinDetailsForm } from "./components/JoinDetailsForm";
 import { CreateEventModal } from "./components/CreateEventModal";
 import { MyEventsSection } from "./components/MyEventsSection";
 
@@ -35,7 +30,7 @@ export function HomePage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col items-center justify-center px-4">
+    <main className="mx-auto flex min-h-dvh w-full max-w-sm flex-col items-center justify-center px-4 py-8">
       <h1 className="mb-2 text-3xl font-semibold tracking-tight text-slate-900">
         Findatime
       </h1>
@@ -45,7 +40,7 @@ export function HomePage() {
 
       <div className="w-full rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
         {publicId !== null && eventQuery.isSuccess ? (
-          <JoinDetailsForm
+          <JoinEventForm
             eventName={eventQuery.data.name}
             loading={joinMutation.isPending}
             error={

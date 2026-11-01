@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Button } from "./ui/Button";
-import { TextInput } from "./ui/TextInput";
-import { Field } from "./ui/Field";
-import { ErrorText } from "./ui/ErrorText";
-import { Modal } from "./ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { TextInput } from "@/components/ui/TextInput";
+import { Field } from "@/components/ui/Field";
+import { ErrorText } from "@/components/ui/ErrorText";
+import { Modal } from "@/components/ui/Modal";
 
 type CreateEventModalProps = {
   loading: boolean;

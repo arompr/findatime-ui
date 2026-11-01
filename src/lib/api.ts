@@ -1,57 +1,138 @@
 import {
-  FindAtimeApiService,
-  OpenAPI,
+  client,
+  FindAtimeApi,
+  type CreateEventResponse,
+  type GetEventAvailabilitiesResponse,
+  type GetEventResponse,
+  type GetMyParticipantResponse,
+  type JoinEventResponse,
+  type SearchEventsResponse,
+  type SetAvailabilityResponse,
 } from "@arompr/findatime-typescript-client";
-import type {
-  CreateEventResponse,
-  GetEventResponse,
-  JoinEventResponse,
-  SearchEventsResponse,
-} from "@arompr/findatime-typescript-client";
+import { ApiRequestError } from "./errors";
+import { getGuestId } from "./guestId";
+import { browserTimezone } from "./time";
 
-OpenAPI.BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5263";
+client.setConfig({
+  baseUrl: import.meta.env.VITE_API_URL ?? "http://localhost:5263",
+  // Guest identity for the endpoints that resolve "me" from a header
+  // (getMyParticipant, setAvailability).
+  headers: { "X-Guest-Id": getGuestId() },
+});
 
-export type JoinByPublicIdParams = {
-  publicId: string;
-  guestId: string;
-  participantName: string;
+type Envelope<T> = {
+  data?: T;
+  error?: unknown;
+  response?: Response;
 };
+
+/**
+ * The client returns `{ data, error, response }` instead of throwing; unwrap it
+ * so callers (TanStack Query) get plain promises that reject with
+ * ApiRequestError on failure.
+ */
+async function unwrap<T>(result: Promise<Envelope<T>>): Promise<T> {
+  const { data, error, response } = await result;
+  if (!response?.ok) {
+    throw ApiRequestError.from(error, response);
+  }
+  return data as T;
+}
 
 export type CreateEventParams = {
   name: string;
-  guestId: string;
   organizerName: string;
 };
 
+export type JoinEventParams = {
+  publicId: string;
+  participantName: string;
+};
+
+export type SetAvailabilityParams = {
+  publicId: string;
+  participantId: string;
+  timezone: string;
+  /** Wall-clock datetimes without offset, in `timezone`. */
+  ranges: Array<{ start: string; end: string }>;
+};
+
 export function getEvent(publicId: string): Promise<GetEventResponse> {
-  return FindAtimeApiService.getEvent(publicId);
+  return unwrap(FindAtimeApi.getEvent({ path: { publicId } }));
 }
 
 export function searchEvents(guestId: string): Promise<SearchEventsResponse> {
-  return FindAtimeApiService.searchEvents(guestId);
-}
-
-export async function joinByPublicId({
-  publicId,
-  guestId,
-  participantName,
-}: JoinByPublicIdParams): Promise<JoinEventResponse> {
-  return await FindAtimeApiService.joinEvent(publicId, {
-    passcode: null,
-    guestId,
-    participantName,
-  });
+  return unwrap(FindAtimeApi.searchEvents({ query: { guestId } }));
 }
 
 export function createEvent({
   name,
-  guestId,
   organizerName,
 }: CreateEventParams): Promise<CreateEventResponse> {
-  return FindAtimeApiService.createEvent({
-    name,
-    guestId,
-    organizerName,
-    isPasscodeProtected: false,
-  });
+  return unwrap(
+    FindAtimeApi.createEvent({
+      body: {
+        name,
+        guestId: getGuestId(),
+        organizerName,
+        isPasscodeProtected: false,
+      },
+    }),
+  );
+}
+
+export function joinEvent({
+  publicId,
+  participantName,
+}: JoinEventParams): Promise<JoinEventResponse> {
+  return unwrap(
+    FindAtimeApi.joinEvent({
+      path: { publicId },
+      body: {
+        passcode: null,
+        guestId: getGuestId(),
+        participantName,
+        timezone: browserTimezone(),
+      },
+    }),
+  );
+}
+
+export function leaveEvent(publicId: string): Promise<void> {
+  return unwrap<void>(
+    FindAtimeApi.leaveEvent({
+      path: { publicId },
+      body: { guestId: getGuestId() },
+    }),
+  );
+}
+
+export function getMyParticipant(publicId: string): Promise<GetMyParticipantResponse> {
+  return unwrap(FindAtimeApi.getMyParticipant({ path: { publicId } }));
+}
+
+export function getEventAvailabilities(
+  publicId: string,
+  timezone: string,
+): Promise<GetEventAvailabilitiesResponse> {
+  return unwrap(
+    FindAtimeApi.getEventAvailabilities({
+      path: { publicId },
+      body: { timezone },
+    }),
+  );
+}
+
+export function setAvailability({
+  publicId,
+  participantId,
+  timezone,
+  ranges,
+}: SetAvailabilityParams): Promise<SetAvailabilityResponse> {
+  return unwrap(
+    FindAtimeApi.setAvailability({
+      path: { publicId, participantId },
+      body: { timezone, ranges },
+    }),
+  );
 }
