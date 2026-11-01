@@ -8,6 +8,7 @@ import {
   type JoinEventResponse,
   type SearchEventsResponse,
   type SetAvailabilityResponse,
+  type UpdateEventParamsResponse,
 } from "@arompr/findatime-typescript-client";
 import { ApiRequestError } from "./errors";
 import { getGuestId } from "./guestId";
@@ -57,6 +58,13 @@ export type SetAvailabilityParams = {
   ranges: Array<{ start: string; end: string }>;
 };
 
+export type UpdateEventParamsInput = {
+  publicId: string;
+  /** Null disables the event timezone fallback. */
+  timezone: string | null;
+  intervalMinutes: number;
+};
+
 export function getEvent(publicId: string): Promise<GetEventResponse> {
   return unwrap(FindAtimeApi.getEvent({ path: { publicId } }));
 }
@@ -77,6 +85,19 @@ export function createEvent({
         organizerName,
         isPasscodeProtected: false,
       },
+    }),
+  );
+}
+
+export function updateEventParams({
+  publicId,
+  timezone,
+  intervalMinutes,
+}: UpdateEventParamsInput): Promise<UpdateEventParamsResponse> {
+  return unwrap(
+    FindAtimeApi.updateEventParams({
+      path: { publicId },
+      body: { timezone, intervalMinutes },
     }),
   );
 }

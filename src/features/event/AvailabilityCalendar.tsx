@@ -18,6 +18,7 @@ import {
 } from "@/lib/availability";
 import { buildDensitySegments, densityAt } from "@/lib/availability-density";
 import { messageFor } from "@/lib/errors";
+import type { IntervalMinutes } from "@/lib/intervals";
 import { useIsMobile, useIsTouch } from "@/hooks/useMediaQuery";
 import { useEventAvailabilities, useSetAvailability } from "./queries";
 import { availabilityResizePlugin } from "./availabilityResizePlugin";
@@ -30,6 +31,7 @@ import { HeatmapLegend } from "./components/HeatmapLegend";
 type AvailabilityCalendarProps = {
   publicId: string;
   participantId: string;
+  intervalMinutes: IntervalMinutes;
 };
 
 const DAY_START_MINUTES = 9 * 60;
@@ -91,7 +93,11 @@ function rangeToSelections(start: Dayjs, end: Dayjs): AvailabilitySelectionInput
   return selections;
 }
 
-export function AvailabilityCalendar({ publicId, participantId }: AvailabilityCalendarProps) {
+export function AvailabilityCalendar({
+  publicId,
+  participantId,
+  intervalMinutes,
+}: AvailabilityCalendarProps) {
   const isMobile = useIsMobile();
   const isTouch = useIsTouch();
   const selections = useSelections(publicId);
@@ -178,14 +184,14 @@ export function AvailabilityCalendar({ publicId, participantId }: AvailabilityCa
         }),
         availabilityResizePlugin({
           publicId,
-          slotDurationMinutes: 15,
+          slotDurationMinutes: intervalMinutes,
           dayStartMinutes: DAY_START_MINUTES,
           dayEndMinutes: DAY_END_MINUTES,
         }),
       );
     }
     return list;
-  }, [isMobile, mode, publicId]);
+  }, [intervalMinutes, isMobile, mode, publicId]);
 
   const handleCellClick = useCallback(
     (info: CellInfo) => {
@@ -250,7 +256,7 @@ export function AvailabilityCalendar({ publicId, participantId }: AvailabilityCa
           headerComponent={<CalendarHeader />}
           initialView={isMobile ? "day" : "week"}
           firstDayOfWeek="monday"
-          slotDuration={15}
+          slotDuration={intervalMinutes}
           timeFormat="12-hour"
           hiddenDays={[]}
           businessHours={{

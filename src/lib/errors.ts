@@ -52,7 +52,8 @@ const BY_ERROR_CODE: Record<string, string> = {
   forbidden: "You don't have permission to do that.",
   invalid_availability_range:
     "Some of those times don't exist in your timezone (daylight saving changes). Adjust them and try again.",
-  invalid_timezone: "Your timezone isn't supported. Please try again.",
+  invalid_timezone: "That timezone isn't supported. Choose another one.",
+  invalid_interval: "Choose a 15, 30, or 60 minute interval.",
 };
 
 export function messageFor(error: unknown, fallback: string): string {

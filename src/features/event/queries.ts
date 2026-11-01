@@ -1,14 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { GetEventResponse } from "@arompr/findatime-typescript-client";
 import {
   getEvent,
   getEventAvailabilities,
   getMyParticipant,
   joinEvent,
   leaveEvent,
+  searchEvents,
   setAvailability,
+  updateEventParams,
 } from "@/lib/api";
 import type { AvailabilityRange } from "@/lib/availability";
 import { clearSelections } from "@/lib/availability";
+import { getGuestId } from "@/lib/guestId";
+import type { IntervalMinutes } from "@/lib/intervals";
 import { browserTimezone, instantToWallClock, wallClockToInstant } from "@/lib/time";
 
 export const eventKeys = {
@@ -53,6 +58,21 @@ export function useMyParticipant(publicId: string) {
   return useQuery({
     queryKey: participantKeys.mine(publicId),
     queryFn: () => getMyParticipant(publicId),
+  });
+}
+
+/**
+ * Whether the current guest organizes this event. The event read endpoint
+ * doesn't expose the role, so this reuses the "my events" search (already
+ * cached by the home page) and picks out this event.
+ */
+export function useIsOrganizer(publicId: string) {
+  const guestId = getGuestId();
+  return useQuery({
+    queryKey: eventKeys.mine(guestId),
+    queryFn: () => searchEvents(guestId),
+    select: (data) =>
+      data.events.some((event) => event.publicId === publicId && event.isOrganizer),
   });
 }
 
@@ -105,6 +125,29 @@ export function useLeaveEvent() {
       void queryClient.invalidateQueries({ queryKey: participantKeys.mine(publicId) });
       void queryClient.invalidateQueries({
         queryKey: availabilityKeys.forEvent(publicId),
+      });
+    },
+  });
+}
+
+export function useUpdateEventParams() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      publicId: string;
+      timezone: string | null;
+      intervalMinutes: IntervalMinutes;
+    }) => updateEventParams(input),
+    onSuccess: (data, input) => {
+      queryClient.setQueryData<GetEventResponse>(
+        eventKeys.byPublicId(input.publicId),
+        (event) =>
+          event === undefined
+            ? event
+            : { ...event, timezone: data.timezone, intervalMinutes: data.intervalMinutes },
+      );
+      void queryClient.invalidateQueries({
+        queryKey: availabilityKeys.forEvent(input.publicId),
       });
     },
   });
