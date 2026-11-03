@@ -89,6 +89,10 @@ export function createEvent({
   );
 }
 
+export function deleteEvent(publicId: string): Promise<void> {
+  return unwrap<void>(FindAtimeApi.deleteEvent({ path: { publicId } }));
+}
+
 export function updateEventParams({
   publicId,
   timezone,
@@ -128,7 +132,9 @@ export function leaveEvent(publicId: string): Promise<void> {
   );
 }
 
-export function getMyParticipant(publicId: string): Promise<GetMyParticipantResponse> {
+export function getMyParticipant(
+  publicId: string,
+): Promise<GetMyParticipantResponse> {
   return unwrap(FindAtimeApi.getMyParticipant({ path: { publicId } }));
 }
 
