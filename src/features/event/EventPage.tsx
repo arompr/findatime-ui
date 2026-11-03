@@ -1,9 +1,10 @@
 import { useState, type ReactNode } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Settings } from "lucide-react";
 import { isNotJoined, messageFor } from "@/lib/errors";
 import { intervalLabel, toIntervalMinutes } from "@/lib/intervals";
 import {
+  useDeleteEvent,
   useEventByPublicId,
   useIsOrganizer,
   useJoinEvent,
@@ -12,6 +13,7 @@ import {
   useUpdateEventParams,
 } from "./queries";
 import { AvailabilityCalendar } from "./AvailabilityCalendar";
+import { DeleteEventButton } from "./components/DeleteEventButton";
 import { EventSettingsModal } from "./components/EventSettingsModal";
 import { JoinEventForm } from "./components/JoinEventForm";
 import { ParticipantBar } from "./components/ParticipantBar";
@@ -31,12 +33,14 @@ function PageSkeleton() {
 }
 
 export function EventPage({ publicId }: EventPageProps) {
+  const navigate = useNavigate();
   const eventQuery = useEventByPublicId(publicId);
   const participantQuery = useMyParticipant(publicId);
   const organizerQuery = useIsOrganizer(publicId);
   const joinMutation = useJoinEvent();
   const leaveMutation = useLeaveEvent();
   const updateParamsMutation = useUpdateEventParams();
+  const deleteMutation = useDeleteEvent();
   const [showSettings, setShowSettings] = useState(false);
 
   const participant = participantQuery.data;
@@ -106,17 +110,39 @@ export function EventPage({ publicId }: EventPageProps) {
             <div className="flex flex-wrap gap-2 self-start">
               <ShareLinkButton publicId={publicId} />
               {isOrganizer && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    updateParamsMutation.reset();
-                    setShowSettings(true);
-                  }}
-                  className="inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                >
-                  <Settings className="size-4" aria-hidden />
-                  Settings
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      updateParamsMutation.reset();
+                      setShowSettings(true);
+                    }}
+                    className="inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                  >
+                    <Settings className="size-4" aria-hidden />
+                    Settings
+                  </button>
+                  <DeleteEventButton
+                    eventName={eventName}
+                    loading={deleteMutation.isPending}
+                    error={
+                      deleteMutation.isError
+                        ? messageFor(
+                            deleteMutation.error,
+                            "Could not delete the event.",
+                          )
+                        : undefined
+                    }
+                    onOpen={deleteMutation.reset}
+                    onConfirm={() =>
+                      deleteMutation.mutate(publicId, {
+                        onSuccess: () => {
+                          void navigate({ to: "/" });
+                        },
+                      })
+                    }
+                  />
+                </>
               )}
             </div>
           </div>

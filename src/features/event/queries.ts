@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { GetEventResponse } from "@arompr/findatime-typescript-client";
 import {
+  deleteEvent,
   getEvent,
   getEventAvailabilities,
   getMyParticipant,
@@ -126,6 +127,20 @@ export function useLeaveEvent() {
       void queryClient.invalidateQueries({
         queryKey: availabilityKeys.forEvent(publicId),
       });
+    },
+  });
+}
+
+export function useDeleteEvent() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (publicId: string) => deleteEvent(publicId),
+    onSuccess: (_data, publicId) => {
+      clearSelections(publicId);
+      queryClient.removeQueries({ queryKey: eventKeys.byPublicId(publicId) });
+      queryClient.removeQueries({ queryKey: participantKeys.mine(publicId) });
+      queryClient.removeQueries({ queryKey: availabilityKeys.forEvent(publicId) });
+      void queryClient.invalidateQueries({ queryKey: eventKeys.mine(getGuestId()) });
     },
   });
 }
