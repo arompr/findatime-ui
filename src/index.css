@@ -166,6 +166,14 @@ html.dark {
   border-bottom-style: none;
 }
 
+/* @ilamy/calendar tints month cells outside the current month with
+   color-mix(in oklch, background, foreground 3%). Our ink foreground is
+   achromatic, so its hue is "none" and the mix falls back to hue 0, which
+   reads as a faint pink/violet. Mixing in oklab has no hue to lose. */
+.findatime-calendar [data-testid^="day-cell-"][class*="in_oklch"] {
+  background-color: color-mix(in oklab, var(--background), var(--foreground) 3%);
+}
+
 /* Others' availability is rendered as a cell-level heat map (see
    getCellClassName in AvailabilityCalendar), so it always spans the full day
    column and never shifts when the current user's blocks overlap it. Stops are
@@ -240,6 +248,12 @@ html.dark {
 .findatime-readonly .hover\:bg-accent,
 .findatime-readonly .droppable-cell {
   cursor: default;
+}
+
+/* Availability is always a time range, so ilamy's all-day row (week and day
+   views) has nothing to show; whole days are set from month view instead. */
+.findatime-calendar [data-testid="vertical-grid-all-day"] {
+  display: none;
 }
 
 /* Mobile day view: the custom header (title + week strip) already names the

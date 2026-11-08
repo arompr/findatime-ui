@@ -15,7 +15,7 @@ import type { AvailabilityRange } from "@/lib/availability";
 import { clearSelections } from "@/lib/availability";
 import { getGuestId } from "@/lib/guestId";
 import type { IntervalMinutes } from "@/lib/intervals";
-import { browserTimezone, instantToWallClock, wallClockToInstant } from "@/lib/time";
+import dayjs from "dayjs";
 
 export const eventKeys = {
   all: ["events"] as const,
@@ -35,7 +35,7 @@ export const availabilityKeys = {
 export type ParticipantAvailability = {
   participantId: string;
   name: string;
-  /** Absolute instants, converted from the API's wall-clock frame. */
+  /** Absolute instants, normalized to UTC ISO strings ("...Z"). */
   ranges: AvailabilityRange[];
 };
 
@@ -78,21 +78,22 @@ export function useIsOrganizer(publicId: string) {
 }
 
 /**
- * Everyone's availability for the event, requested in the browser's timezone
- * and converted to absolute instants for the calendar.
+ * Everyone's availability for the event. The API returns UTC instants already
+ * snapped to the event's grid; they are normalized to "...Z" ISO strings so
+ * keys built from them (draft store, calendar) stay stable.
  */
 export function useEventAvailabilities(publicId: string) {
   return useQuery({
     queryKey: availabilityKeys.forEvent(publicId),
     queryFn: async (): Promise<EventAvailabilities> => {
-      const result = await getEventAvailabilities(publicId, browserTimezone());
+      const result = await getEventAvailabilities(publicId);
       return {
         participants: result.participants.map((participant) => ({
           participantId: participant.participantId,
           name: participant.name,
           ranges: participant.ranges.map((range) => ({
-            startUtc: wallClockToInstant(range.start, result.timezone),
-            endUtc: wallClockToInstant(range.end, result.timezone),
+            startUtc: dayjs(range.start).toISOString(),
+            endUtc: dayjs(range.end).toISOString(),
           })),
         })),
       };
@@ -152,6 +153,8 @@ export function useUpdateEventParams() {
       publicId: string;
       timezone: string | null;
       intervalMinutes: IntervalMinutes;
+      dayStartHour: number;
+      dayEndHour: number;
     }) => updateEventParams(input),
     onSuccess: (data, input) => {
       queryClient.setQueryData<GetEventResponse>(
@@ -159,7 +162,13 @@ export function useUpdateEventParams() {
         (event) =>
           event === undefined
             ? event
-            : { ...event, timezone: data.timezone, intervalMinutes: data.intervalMinutes },
+            : {
+                ...event,
+                timezone: data.timezone,
+                intervalMinutes: data.intervalMinutes,
+                dayStartHour: data.dayStartHour,
+                dayEndHour: data.dayEndHour,
+              },
       );
       void queryClient.invalidateQueries({
         queryKey: availabilityKeys.forEvent(input.publicId),
@@ -175,18 +184,12 @@ export function useSetAvailability() {
       publicId: string;
       participantId: string;
       ranges: AvailabilityRange[];
-    }) => {
-      const timezone = browserTimezone();
-      return setAvailability({
+    }) =>
+      setAvailability({
         publicId: input.publicId,
         participantId: input.participantId,
-        timezone,
-        ranges: input.ranges.map((range) => ({
-          start: instantToWallClock(range.startUtc, timezone),
-          end: instantToWallClock(range.endUtc, timezone),
-        })),
-      });
-    },
+        ranges: input.ranges.map((range) => ({ start: range.startUtc, end: range.endUtc })),
+      }),
     onSuccess: (_data, input) => {
       void queryClient.invalidateQueries({
         queryKey: availabilityKeys.forEvent(input.publicId),

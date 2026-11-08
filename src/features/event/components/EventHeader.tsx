@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Clock, Crown, Globe, LogOut, MoreHorizontal, Settings2, Trash2, UserRound } from "lucide-react";
+import { CalendarClock, Clock, Crown, Globe, LogOut, MoreHorizontal, Settings2, Trash2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Menu, type MenuItem } from "@/components/ui/Menu";
 import { Tooltip } from "@/components/ui/Tooltip";
@@ -12,13 +12,30 @@ type EventHeaderProps = {
   participantName: string;
   intervalMinutes: IntervalMinutes;
   timezone: string | null;
+  /** The calendar's hours in the viewer's timezone, e.g. "9 AM – 9 PM". */
+  hoursLabel: string;
+  /**
+   * The event's own hours in its timezone, e.g. "8 AM – 9 PM ET". Null when the
+   * viewer is in the event's timezone, so the local hours say it all.
+   */
+  eventHoursLabel: string | null;
   isOrganizer: boolean;
   onOpenSettings: () => void;
   onLeave: () => void;
   onDelete: () => void;
 };
 
-function MetaChip({ icon, children, tooltip }: { icon: ReactNode; children: ReactNode; tooltip: string }) {
+function MetaChip({
+  icon,
+  children,
+  tooltip,
+  wide = false,
+}: {
+  icon: ReactNode;
+  children: ReactNode;
+  tooltip: string;
+  wide?: boolean;
+}) {
   return (
     <Tooltip content={tooltip}>
       <span
@@ -28,7 +45,7 @@ function MetaChip({ icon, children, tooltip }: { icon: ReactNode; children: Reac
         <span className="shrink-0" aria-hidden>
           {icon}
         </span>
-        <span className="max-w-40 truncate">{children}</span>
+        <span className={wide ? "max-w-[min(22rem,70vw)] truncate" : "max-w-40 truncate"}>{children}</span>
       </span>
     </Tooltip>
   );
@@ -40,6 +57,8 @@ export function EventHeader({
   participantName,
   intervalMinutes,
   timezone,
+  hoursLabel,
+  eventHoursLabel,
   isOrganizer,
   onOpenSettings,
   onLeave,
@@ -49,7 +68,7 @@ export function EventHeader({
     ? [
         {
           label: "Event settings",
-          description: "Slot length, timezone",
+          description: "Slot length, hours, timezone",
           icon: <Settings2 className="size-4" />,
           onSelect: onOpenSettings,
         },
@@ -90,10 +109,21 @@ export function EventHeader({
           >
             {intervalLabel(intervalMinutes)} slots
           </MetaChip>
+          <MetaChip
+            icon={<CalendarClock className="size-3.5" />}
+            tooltip={
+              eventHoursLabel
+                ? "Hours shown on the calendar in your timezone, then the event's own hours"
+                : "Hours shown on the calendar, in your timezone"
+            }
+            wide={eventHoursLabel !== null}
+          >
+            {eventHoursLabel ? `${hoursLabel} your time · ${eventHoursLabel}` : hoursLabel}
+          </MetaChip>
           {timezone && (
             <MetaChip
               icon={<Globe className="size-3.5" />}
-              tooltip="Fallback timezone when a viewer's own timezone isn't known"
+              tooltip="The event's timezone: its hours and slot grid are set here"
             >
               {timezone.replace(/_/g, " ")}
             </MetaChip>

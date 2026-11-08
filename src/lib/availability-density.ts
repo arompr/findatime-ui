@@ -17,12 +17,13 @@ type RangeHolder = {
  * each segment.
  */
 export function buildDensitySegments(participants: RangeHolder[]): DensitySegment[] {
-  const ranges = participants.flatMap((participant) =>
+  const perParticipant = participants.map((participant) =>
     participant.ranges.map((range) => ({
       start: dayjs(range.startUtc).valueOf(),
       end: dayjs(range.endUtc).valueOf(),
     })),
   );
+  const ranges = perParticipant.flat();
   if (ranges.length === 0) return [];
 
   const boundaries = [...new Set(ranges.flatMap((r) => [r.start, r.end]))].sort(
@@ -35,9 +36,11 @@ export function buildDensitySegments(participants: RangeHolder[]): DensitySegmen
     const endMs = boundaries[i + 1];
     if (endMs <= startMs) continue;
 
+    // Count people, not ranges: one participant's overlapping ranges (e.g. an
+    // all-day range plus a timed one) must still count once.
     let count = 0;
-    for (const range of ranges) {
-      if (range.start <= startMs && range.end >= endMs) count++;
+    for (const own of perParticipant) {
+      if (own.some((range) => range.start <= startMs && range.end >= endMs)) count++;
     }
     if (count === 0) continue;
 
@@ -85,32 +88,29 @@ export function namesFreeAt(participants: NamedRangeHolder[], timeMs: number): s
 }
 
 /**
- * Upcoming segments where the most people overlap (at least two), earliest
- * first. Segments are split at day boundaries so each one reads as a single
- * day's time range.
+ * Upcoming windows ranked by how many people overlap (at least two), then
+ * earliest first. Windows are split at day boundaries so each one reads as a
+ * single day's time range.
  */
 export function bestSegments(
   segments: DensitySegment[],
   nowMs: number,
   limit = 3,
 ): DensitySegment[] {
-  const upcoming = segments.filter((segment) => segment.startMs >= nowMs);
-  const max = upcoming.reduce((best, segment) => Math.max(best, segment.count), 0);
-  if (max < 2) return [];
+  return splitByDay(segments.filter((segment) => segment.startMs >= nowMs && segment.count >= 2))
+    .sort((a, b) => b.count - a.count || a.startMs - b.startMs)
+    .slice(0, limit);
+}
 
-  const result: DensitySegment[] = [];
-  for (const segment of upcoming) {
-    if (segment.count !== max) continue;
-    let startMs = segment.startMs;
-    while (startMs < segment.endMs && result.length < limit) {
-      const dayEnd = dayjs(startMs).startOf("day").add(1, "day").valueOf();
-      const endMs = Math.min(segment.endMs, dayEnd);
-      result.push({ startMs, endMs, count: max });
-      startMs = endMs;
-    }
-    if (result.length >= limit) break;
-  }
-  return result;
+/** Highest overlap count across all segments, or 0. */
+export function maxCount(segments: DensitySegment[]): number {
+  return segments.reduce((max, segment) => Math.max(max, segment.count), 0);
+}
+
+/** Heat-map level (1-4) for `count` free out of `total`; 4 means everyone. */
+export function heatLevel(count: number, total: number): number {
+  if (count <= 0 || total <= 0) return 0;
+  return Math.min(4, Math.max(1, Math.ceil((count / total) * 4)));
 }
 
 /** Splits segments at local midnight so each piece belongs to one day. */

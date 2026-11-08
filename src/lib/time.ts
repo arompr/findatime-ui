@@ -6,23 +6,28 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 /**
- * The API exchanges availability as wall-clock datetimes without an offset
- * ("2026-10-31T09:00:00") paired with an IANA timezone, while the calendar
- * works with absolute instants. These helpers convert at that boundary.
+ * The API exchanges availability as UTC instants and snaps them to the event's
+ * grid in the event timezone. The browser converts only for display; these
+ * helpers format instants in the browser's timezone.
  */
 
 export function browserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-/** Wall-clock datetime in `tz` -> UTC ISO instant. */
-export function wallClockToInstant(wallClock: string, tz: string): string {
-  return dayjs.tz(wallClock, tz).toISOString();
-}
-
-/** UTC ISO instant -> wall-clock datetime in `tz`, formatted the way the API expects. */
-export function instantToWallClock(instant: string, tz: string): string {
-  return dayjs(instant).tz(tz).format("YYYY-MM-DDTHH:mm:ss");
+/** Short display name for `tz`, e.g. "ET" for America/New_York. */
+export function timezoneShortName(tz: string, at: Date = new Date()): string {
+  for (const timeZoneName of ["shortGeneric", "short"] as const) {
+    try {
+      const part = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName })
+        .formatToParts(at)
+        .find((p) => p.type === "timeZoneName");
+      if (part) return part.value;
+    } catch {
+      // Older engines reject "shortGeneric"; fall through to "short".
+    }
+  }
+  return tz.replace(/_/g, " ");
 }
 
 function clock(ms: number): string {

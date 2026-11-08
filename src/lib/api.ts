@@ -53,8 +53,7 @@ export type JoinEventParams = {
 export type SetAvailabilityParams = {
   publicId: string;
   participantId: string;
-  timezone: string;
-  /** Wall-clock datetimes without offset, in `timezone`. */
+  /** ISO 8601 instants with an explicit offset (UTC "Z"). */
   ranges: Array<{ start: string; end: string }>;
 };
 
@@ -63,6 +62,9 @@ export type UpdateEventParamsInput = {
   /** Null disables the event timezone fallback. */
   timezone: string | null;
   intervalMinutes: number;
+  /** Whole hours in the event's anchor frame; start < end. */
+  dayStartHour: number;
+  dayEndHour: number;
 };
 
 export function getEvent(publicId: string): Promise<GetEventResponse> {
@@ -97,11 +99,13 @@ export function updateEventParams({
   publicId,
   timezone,
   intervalMinutes,
+  dayStartHour,
+  dayEndHour,
 }: UpdateEventParamsInput): Promise<UpdateEventParamsResponse> {
   return unwrap(
     FindAtimeApi.updateEventParams({
       path: { publicId },
-      body: { timezone, intervalMinutes },
+      body: { timezone, intervalMinutes, dayStartHour, dayEndHour },
     }),
   );
 }
@@ -117,6 +121,7 @@ export function joinEvent({
         passcode: null,
         guestId: getGuestId(),
         participantName,
+        // The only place a participant's timezone is recorded.
         timezone: browserTimezone(),
       },
     }),
@@ -140,26 +145,19 @@ export function getMyParticipant(
 
 export function getEventAvailabilities(
   publicId: string,
-  timezone: string,
 ): Promise<GetEventAvailabilitiesResponse> {
-  return unwrap(
-    FindAtimeApi.getEventAvailabilities({
-      path: { publicId },
-      body: { timezone },
-    }),
-  );
+  return unwrap(FindAtimeApi.getEventAvailabilities({ path: { publicId } }));
 }
 
 export function setAvailability({
   publicId,
   participantId,
-  timezone,
   ranges,
 }: SetAvailabilityParams): Promise<SetAvailabilityResponse> {
   return unwrap(
     FindAtimeApi.setAvailability({
       path: { publicId, participantId },
-      body: { timezone, ranges },
+      body: { ranges },
     }),
   );
 }

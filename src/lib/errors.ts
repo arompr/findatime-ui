@@ -54,6 +54,7 @@ const BY_ERROR_CODE: Record<string, string> = {
     "Some of those times don't exist in your timezone (daylight saving changes). Adjust them and try again.",
   invalid_timezone: "That timezone isn't supported. Choose another one.",
   invalid_interval: "Choose a 15, 30, or 60 minute interval.",
+  invalid_day_window: "The calendar must start before it ends, in whole hours.",
 };
 
 export function messageFor(error: unknown, fallback: string): string {

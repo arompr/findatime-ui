@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Check, Hand, MousePointerClick, Move, Pencil, Pointer } from "lucide-react";
+import { Check, Hand, MousePointerClick, Move, Pencil, Plus, Pointer } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 
@@ -11,7 +11,7 @@ type ToolbarProps = {
   dirty: boolean;
   saving: boolean;
   justSaved: boolean;
-  canCancel: boolean;
+  hasServerRanges: boolean;
   onEdit: () => void;
   onCancel: () => void;
   onSave: () => void;
@@ -53,29 +53,20 @@ function Status({ mode, dirty, justSaved }: Pick<ToolbarProps, "mode" | "dirty" 
 function SaveButtons({
   dirty,
   saving,
-  canCancel,
   onCancel,
   onSave,
   className = "",
-}: Pick<ToolbarProps, "dirty" | "saving" | "canCancel" | "onCancel" | "onSave"> & {
+}: Pick<ToolbarProps, "dirty" | "saving" | "onCancel" | "onSave"> & {
   className?: string;
 }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      {canCancel && (
-        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving} className="flex-1 sm:flex-none">
-          {dirty ? "Discard" : "Cancel"}
-        </Button>
-      )}
-      <Button
-        size="sm"
-        onClick={onSave}
-        loading={saving}
-        disabled={!dirty && !canCancel}
-        className="flex-[2] sm:flex-none sm:px-5"
-      >
+      <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving} className="flex-1 sm:flex-none">
+        {dirty ? "Discard" : "Cancel"}
+      </Button>
+      <Button size="sm" onClick={onSave} loading={saving} className="flex-[2] sm:flex-none sm:px-5">
         {!saving && <Check className="size-4" aria-hidden />}
-        {dirty || !canCancel ? "Save" : "Done"}
+        {dirty ? "Save" : "Done"}
       </Button>
     </div>
   );
@@ -83,7 +74,7 @@ function SaveButtons({
 
 /** Card header: title, live status, and Edit / Save controls. */
 export function AvailabilityToolbar(props: ToolbarProps) {
-  const { mode, onEdit } = props;
+  const { mode, onEdit, hasServerRanges } = props;
   return (
     <div className="flex min-h-10 items-center justify-between gap-3">
       <div className="flex min-w-0 items-baseline gap-2.5">
@@ -93,10 +84,17 @@ export function AvailabilityToolbar(props: ToolbarProps) {
         <Status mode={props.mode} dirty={props.dirty} justSaved={props.justSaved} />
       </div>
       {mode === "read" ? (
-        <Button variant="secondary" size="sm" onClick={onEdit}>
-          <Pencil className="size-3.5" aria-hidden />
-          Edit mine
-        </Button>
+        hasServerRanges ? (
+          <Button variant="secondary" size="sm" onClick={onEdit}>
+            <Pencil className="size-3.5" aria-hidden />
+            Edit my times
+          </Button>
+        ) : (
+          <Button size="sm" onClick={onEdit}>
+            <Plus className="size-4" aria-hidden />
+            Add my times
+          </Button>
+        )
       ) : (
         <SaveButtons {...props} className="hidden sm:flex" />
       )}

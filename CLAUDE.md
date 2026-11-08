@@ -22,8 +22,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Editing the calendar touches several modules; the data path is:
 
 1. `useEventAvailabilities` (`features/event/queries.ts`) fetches every
-   participant's ranges; `api.ts` converts wall-clock + `timezone` to UTC
-   instants.
+   participant's ranges as UTC instants and normalizes them to `...Z` ISO
+   strings.
 2. `AvailabilityCalendar.tsx` seeds the draft store (`lib/availability.ts`)
    with the current participant's ranges via `setSelections`, and reads it with
    `useSyncExternalStore`. The store is module-level, keyed by `publicId`.
@@ -32,9 +32,9 @@ Editing the calendar touches several modules; the data path is:
    `addSelections` / `moveSelection` / `resizeSelection` / `removeSelection`.
    Every write re-merges overlapping/adjacent ranges within the same browser-local day, so ids can
    disappear after a merge; a move/resize to a zero-length range deletes it.
-4. Save calls `useSetAvailability`, which sends the full draft back (converted
-   to wall-clock at the API boundary) and invalidates
-   `availabilityKeys.forEvent`.
+4. Save calls `useSetAvailability`, which sends the full draft back as instants
+   (the server snaps it to the event's grid in the event timezone) and
+   invalidates `availabilityKeys.forEvent`.
 5. Other participants' ranges feed `lib/availability-density.ts` to build the
    heat-map overlap segments.
 

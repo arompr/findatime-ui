@@ -39,6 +39,8 @@ import {
   dayPeaks,
   dayWindows,
   densityAt,
+  heatLevel,
+  maxCount,
   namesFreeAt,
 } from "@/lib/availability-density";
 import { messageFor } from "@/lib/errors";
@@ -68,6 +70,9 @@ type AvailabilityCalendarProps = {
   publicId: string;
   participantId: string;
   intervalMinutes: IntervalMinutes;
+  /** Visible hours as minutes from local midnight (see lib/dayWindow). */
+  dayStartMinutes: number;
+  dayEndMinutes: number;
 };
 
 type SlotInspection = {
@@ -86,8 +91,6 @@ type MonthEventData =
   | { kind: "range" }
   | { kind: "summary"; dayStartMs: number; dayEndMs: number; count: number };
 
-const DAY_START_MINUTES = 9 * 60;
-const DAY_END_MINUTES = 17 * 60;
 const CALENDAR_HEIGHT_CLASS = "h-[62dvh] min-h-[420px] sm:h-[600px] sm:min-h-0";
 const HOVER_INSPECT_DELAY_MS = 250;
 const SAVED_FLASH_MS = 2500;
@@ -95,7 +98,8 @@ const MAX_FORM_DAYS = 42;
 const MONTH_EVENT_HEIGHT = 20;
 const MONTH_MAX_EVENTS = 2;
 
-function toClock(minutes: number): string {
+function toClock(minutes: number): string | number {
+  if (minutes % 60 === 0) return minutes / 60;
   const hours = String(Math.floor(minutes / 60)).padStart(2, "0");
   const mins = String(minutes % 60).padStart(2, "0");
   return `${hours}:${mins}`;
@@ -203,6 +207,8 @@ export function AvailabilityCalendar({
   publicId,
   participantId,
   intervalMinutes,
+  dayStartMinutes,
+  dayEndMinutes,
 }: AvailabilityCalendarProps) {
   const isMobile = useIsMobile();
   const isTouch = useIsTouch();
@@ -213,6 +219,7 @@ export function AvailabilityCalendar({
   const [mode, setMode] = useState<AvailabilityMode | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  const [highlightBest, setHighlightBest] = useState(false);
   const [inspection, setInspection] = useState<SlotInspection | null>(null);
   const [calendarView, setCalendarView] = useState<string>(isMobile ? "day" : "week");
   const navigatorRef = useRef<CalendarControls | null>(null);
@@ -238,7 +245,7 @@ export function AvailabilityCalendar({
     if (data === undefined) return;
     if (mode === null) {
       setSelections(publicId, serverRanges);
-      setMode(serverRanges.length > 0 ? "read" : "edit");
+      setMode("read");
     } else if (mode === "read") {
       setSelections(publicId, serverRanges);
     }
@@ -354,15 +361,34 @@ export function AvailabilityCalendar({
     return days;
   }, [others, selections]);
 
+  const total = everyone.length;
+  const peakCount = useMemo(() => maxCount(densitySegments), [densitySegments]);
+  const canHighlightBest = mode === "read" && peakCount >= 2;
+  const bestOnly = highlightBest && canHighlightBest;
+
   const getCellClassName = useCallback(
     (info: CellInfo) => {
       const count = isWholeDay(info.start, info.end)
         ? (peaks.get(info.start.format("YYYY-MM-DD"))?.count ?? 0)
         : densityAt(densitySegments, info.start.valueOf());
-      return count > 0 ? `findatime-heat-${Math.min(count, 4)}` : "";
+      if (bestOnly) return count === peakCount ? "findatime-heat-4" : "";
+      const level = heatLevel(count, total);
+      return level > 0 ? `findatime-heat-${level}` : "";
     },
-    [densitySegments, peaks],
+    [densitySegments, peaks, bestOnly, peakCount, total],
   );
+
+  // Turning the highlight on jumps to the next peak window (or the latest past
+  // one), so it never lands on a period with nothing to show.
+  const handleHighlightBestChange = (value: boolean) => {
+    setHighlightBest(value);
+    if (!value) return;
+    const peakSegments = densitySegments.filter((segment) => segment.count === peakCount);
+    const nowMs = Date.now();
+    const target =
+      peakSegments.find((segment) => segment.endMs > nowMs) ?? peakSegments[peakSegments.length - 1];
+    if (target) navigatorRef.current?.setCurrentDate(dayjs(target.startMs));
+  };
 
   const openWeek = useCallback((date: Dayjs) => {
     setInspection(null);
@@ -386,8 +412,6 @@ export function AvailabilityCalendar({
   }, []);
 
   const handleActivateBlock = useCallback((id: string) => setSelectedId(id), []);
-
-  const total = everyone.length;
 
   const renderEvent = useCallback(
     (event: CalendarEvent) => {
@@ -457,14 +481,24 @@ export function AvailabilityCalendar({
         availabilityResizePlugin({
           publicId,
           slotDurationMinutes: intervalMinutes,
-          dayStartMinutes: DAY_START_MINUTES,
-          dayEndMinutes: DAY_END_MINUTES,
+          dayStartMinutes,
+          dayEndMinutes,
           onActivate: handleActivateBlock,
         }),
       );
     }
     return list;
-  }, [intervalMinutes, isMobile, isTouch, isMonth, mode, publicId, handleActivateBlock]);
+  }, [
+    intervalMinutes,
+    dayStartMinutes,
+    dayEndMinutes,
+    isMobile,
+    isTouch,
+    isMonth,
+    mode,
+    publicId,
+    handleActivateBlock,
+  ]);
 
   const handleCellClick = useCallback(
     (info: CellInfo) => {
@@ -488,8 +522,8 @@ export function AvailabilityCalendar({
       const firstDay = days[0];
       const snap = (minutes: number) =>
         Math.min(
-          DAY_END_MINUTES,
-          Math.max(DAY_START_MINUTES, Math.round(minutes / intervalMinutes) * intervalMinutes),
+          dayEndMinutes,
+          Math.max(dayStartMinutes, Math.round(minutes / intervalMinutes) * intervalMinutes),
         );
       const initialRanges: DayTimeRange[] = onDays
         .filter((selection) => dayKeyOf(selection.startUtc) === dayKeys[0])
@@ -507,12 +541,12 @@ export function AvailabilityCalendar({
           initialRanges={
             initialRanges.length > 0
               ? initialRanges
-              : [{ start: DAY_START_MINUTES, end: DAY_END_MINUTES }]
+              : [{ start: dayStartMinutes, end: dayEndMinutes }]
           }
           hasExisting={onDays.length > 0}
           slotMinutes={intervalMinutes}
-          dayStartMinutes={DAY_START_MINUTES}
-          dayEndMinutes={DAY_END_MINUTES}
+          dayStartMinutes={dayStartMinutes}
+          dayEndMinutes={dayEndMinutes}
           onClose={onClose}
           onApply={(ranges) => {
             replaceDays(
@@ -531,7 +565,7 @@ export function AvailabilityCalendar({
         />
       );
     },
-    [mode, selections, intervalMinutes, publicId],
+    [mode, selections, intervalMinutes, dayStartMinutes, dayEndMinutes, publicId],
   );
 
   const inspectCell = (target: EventTarget | null, hover: boolean): SlotInspection | null => {
@@ -586,7 +620,7 @@ export function AvailabilityCalendar({
     setSelections(publicId, serverRanges);
     setSelectedId(null);
     saveMutation.reset();
-    if (hasServerRanges) setMode("read");
+    setMode("read");
   };
 
   const handleSave = () => {
@@ -634,7 +668,7 @@ export function AvailabilityCalendar({
     dirty,
     saving: saveMutation.isPending,
     justSaved,
-    canCancel: hasServerRanges || dirty,
+    hasServerRanges,
     onEdit: handleEdit,
     onCancel: handleCancel,
     onSave: handleSave,
@@ -660,6 +694,10 @@ export function AvailabilityCalendar({
             <ResponsesSummary
               participants={participantStatuses}
               bestTimes={bestTimes}
+              total={total}
+              peakCount={peakCount}
+              highlightBest={bestOnly}
+              onHighlightBestChange={handleHighlightBestChange}
               onBestTimeClick={(startMs) =>
                 isMonth
                   ? openWeek(dayjs(startMs))
@@ -738,8 +776,8 @@ export function AvailabilityCalendar({
                 "saturday",
                 "sunday",
               ],
-              startTime: toClock(DAY_START_MINUTES),
-              endTime: toClock(DAY_END_MINUTES),
+              startTime: toClock(dayStartMinutes),
+              endTime: toClock(dayEndMinutes),
             }}
             hideNonBusinessHours
             disableEventClick

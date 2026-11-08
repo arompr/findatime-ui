@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Sparkles, Target } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { formatDayLabel, formatTimeRange } from "@/lib/time";
 
@@ -18,6 +18,11 @@ export type BestTime = {
 type ResponsesSummaryProps = {
   participants: ParticipantStatus[];
   bestTimes: BestTime[];
+  total: number;
+  /** Highest overlap anywhere on the calendar. */
+  peakCount: number;
+  highlightBest: boolean;
+  onHighlightBestChange: (value: boolean) => void;
   onBestTimeClick: (startMs: number) => void;
 };
 
@@ -57,7 +62,19 @@ function Avatar({ participant }: { participant: ParticipantStatus }) {
   );
 }
 
-export function ResponsesSummary({ participants, bestTimes, onBestTimeClick }: ResponsesSummaryProps) {
+function freeLabel(count: number, total: number): string {
+  return count >= total ? "Everyone free" : `${count} of ${total} free`;
+}
+
+export function ResponsesSummary({
+  participants,
+  bestTimes,
+  total,
+  peakCount,
+  highlightBest,
+  onHighlightBestChange,
+  onBestTimeClick,
+}: ResponsesSummaryProps) {
   const responded = participants.filter((participant) => participant.responded).length;
   const shown = participants.slice(0, MAX_AVATARS);
   const hidden = participants.slice(MAX_AVATARS);
@@ -89,36 +106,57 @@ export function ResponsesSummary({ participants, bestTimes, onBestTimeClick }: R
           </p>
         </div>
 
-        <Tooltip content="Darker means more people are free at that time">
-          <span
-            tabIndex={0}
-            className="inline-flex cursor-default items-center gap-2 rounded-md text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Fewer
-            <span className="flex gap-0.5" aria-hidden>
-              {LEVELS.map((level) => (
-                <span
-                  key={level}
-                  className={`findatime-heat-${level} size-3.5 rounded-[4px] border border-border`}
-                />
-              ))}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {highlightBest ? (
+            <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="findatime-heat-4 size-3.5 rounded-[4px] border border-border" aria-hidden />
+              {freeLabel(peakCount, total)}
             </span>
-            More free
-          </span>
-        </Tooltip>
+          ) : (
+            <Tooltip content="Darker means more people are free; darkest means everyone">
+              <span
+                tabIndex={0}
+                className="inline-flex cursor-default items-center gap-2 rounded-md text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Fewer
+                <span className="flex gap-0.5" aria-hidden>
+                  {LEVELS.map((level) => (
+                    <span
+                      key={level}
+                      className={`findatime-heat-${level} size-3.5 rounded-[4px] border border-border`}
+                    />
+                  ))}
+                </span>
+                Everyone
+              </span>
+            </Tooltip>
+          )}
+          {peakCount >= 2 && (
+            <button
+              type="button"
+              aria-pressed={highlightBest}
+              onClick={() => onHighlightBestChange(!highlightBest)}
+              className={`inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] ${
+                highlightBest
+                  ? "border-primary bg-primary text-primary-foreground hover:bg-primary/85"
+                  : "border-input bg-card text-foreground hover:bg-secondary"
+              }`}
+            >
+              <Target className="size-3.5" aria-hidden />
+              Best times only
+            </button>
+          )}
+        </div>
       </div>
 
       {bestTimes.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 animate-in fade-in duration-300">
           <span className="mr-1 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Sparkles className="size-3.5 text-brand" aria-hidden />
-            Best overlap
+            {bestTimes[0].count >= total ? "Everyone's free" : "Most people free"}
           </span>
           {bestTimes.map((best) => (
-            <Tooltip
-              key={best.startMs}
-              content={`${best.count} of ${participants.length} free · tap to view`}
-            >
+            <Tooltip key={best.startMs} content={`${freeLabel(best.count, total)} · tap to view`}>
               <button
                 type="button"
                 onClick={() => onBestTimeClick(best.startMs)}
@@ -128,6 +166,11 @@ export function ResponsesSummary({ participants, bestTimes, onBestTimeClick }: R
                 <span className="text-muted-foreground tabular-nums">
                   {formatTimeRange(best.startMs, best.endMs)}
                 </span>
+                {best.count < total && (
+                  <span className="tabular-nums text-muted-foreground">
+                    · {best.count}/{total}
+                  </span>
+                )}
               </button>
             </Tooltip>
           ))}

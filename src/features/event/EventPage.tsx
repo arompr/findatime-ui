@@ -1,9 +1,18 @@
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
+import dayjs from "dayjs";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarX2 } from "lucide-react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { isNotJoined, messageFor } from "@/lib/errors";
 import { toIntervalMinutes } from "@/lib/intervals";
+import {
+  DEFAULT_DAY_END_HOUR,
+  DEFAULT_DAY_START_HOUR,
+  hourLabel,
+  localDayWindow,
+  toDayHour,
+} from "@/lib/dayWindow";
+import { browserTimezone, formatTimeRange, timezoneShortName } from "@/lib/time";
 import {
   useDeleteEvent,
   useEventByPublicId,
@@ -71,6 +80,26 @@ export function EventPage({ publicId }: EventPageProps) {
   const eventName = event?.name;
   const intervalMinutes = toIntervalMinutes(event?.intervalMinutes);
   const isOrganizer = organizerQuery.data === true;
+  const eventTimezone = event?.timezone ?? null;
+  const dayStartHour = toDayHour(event?.dayStartHour, 0, 23, DEFAULT_DAY_START_HOUR);
+  const parsedEndHour = toDayHour(event?.dayEndHour, 1, 24, DEFAULT_DAY_END_HOUR);
+  const dayEndHour = parsedEndHour > dayStartHour ? parsedEndHour : 24;
+  const dayWindow = useMemo(
+    () => localDayWindow(dayStartHour, dayEndHour, eventTimezone, intervalMinutes),
+    [dayStartHour, dayEndHour, eventTimezone, intervalMinutes],
+  );
+  const hoursLabel = useMemo(() => {
+    const midnight = dayjs().startOf("day");
+    return formatTimeRange(
+      midnight.add(dayWindow.startMinutes, "minute").valueOf(),
+      midnight.add(dayWindow.endMinutes, "minute").valueOf(),
+    );
+  }, [dayWindow]);
+  const eventHoursLabel = useMemo(() => {
+    const frame = eventTimezone ?? "UTC";
+    if (frame === browserTimezone()) return null;
+    return `${hourLabel(dayStartHour)} – ${hourLabel(dayEndHour)} ${timezoneShortName(frame)}`;
+  }, [dayStartHour, dayEndHour, eventTimezone]);
 
   let content: ReactNode;
   if (eventQuery.isPending || participantQuery.isPending) {
@@ -120,7 +149,9 @@ export function EventPage({ publicId }: EventPageProps) {
           eventName={eventName}
           participantName={participant.name}
           intervalMinutes={intervalMinutes}
-          timezone={event?.timezone ?? null}
+          timezone={eventTimezone}
+          hoursLabel={hoursLabel}
+          eventHoursLabel={eventHoursLabel}
           isOrganizer={isOrganizer}
           onOpenSettings={() => {
             updateParamsMutation.reset();
@@ -141,6 +172,8 @@ export function EventPage({ publicId }: EventPageProps) {
             publicId={publicId}
             participantId={participant.participantId}
             intervalMinutes={intervalMinutes}
+            dayStartMinutes={dayWindow.startMinutes}
+            dayEndMinutes={dayWindow.endMinutes}
           />
         </div>
 
@@ -148,6 +181,8 @@ export function EventPage({ publicId }: EventPageProps) {
           <EventSettingsModal
             timezone={event.timezone}
             intervalMinutes={intervalMinutes}
+            dayStartHour={dayStartHour}
+            dayEndHour={dayEndHour}
             loading={updateParamsMutation.isPending}
             error={
               updateParamsMutation.isError

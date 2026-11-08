@@ -11,7 +11,7 @@
   participant, then the availability calendar: mark/edit your own availability
   (tap/click, drag-create, move/resize blocks), see everyone's overlap as a
   heat map, share the link, leave the event. Organizers additionally get event
-  settings (timezone fallback, slot interval) and event deletion.
+  settings (timezone fallback, slot interval, calendar hours) and event deletion.
 
 On desktop, month view is a day-level overview: each day is shaded by its peak
 overlap with a "best window" chip. In edit mode, clicking a day (or dragging
@@ -47,8 +47,9 @@ src/
     api.ts                  hey-api client config + endpoint wrappers (unwraps, throws ApiRequestError)
     errors.ts               ApiRequestError + API error-code -> user message mapping
     guestId.ts              Stable per-browser UUID in localStorage
-    time.ts                 Wall-clock <-> instant conversions (dayjs utc/timezone), browserTimezone()
+    time.ts                 browserTimezone(), timezone short names, time/day formatters (dayjs utc/timezone)
     intervals.ts            Allowed slot intervals (15/30/60) + labels
+    dayWindow.ts            Event day window (whole hours in the event timezone) -> browser-local minutes
     timezones.ts            Selectable IANA timezone options
     availability.ts         In-memory draft store for calendar editing (external store)
     availability-density.ts Heat-map segments (overlap counts) + binary-search lookup
@@ -91,12 +92,11 @@ failures into `ApiRequestError` (status + API error code) so TanStack Query
 `isError` and `messageFor` (in `errors.ts`) drive the UI. Endpoints take the
 public id directly.
 
-Availability has wall-clock semantics: the API exchanges ranges as local
-datetimes without offset plus an IANA `timezone`, and GET responses report the
-frame they used in their `timezone` field. Convert only at the API boundary
-with `lib/time.ts` — inside the app, ranges are absolute UTC instants
-(`startUtc`/`endUtc`). The bulk availability GETs use the HTTP `QUERY` method;
-the client package hand-writes those calls.
+Availability is exchanged as UTC instants; the server snaps to the event's slot
+grid in the event timezone. The browser converts only for display. Inside the
+app, ranges are UTC ISO strings (`startUtc`/`endUtc`, normalized to `...Z` when
+read so keys stay stable) and are sent back as-is. The participant's timezone is
+sent once, on join.
 
 ## Conventions
 

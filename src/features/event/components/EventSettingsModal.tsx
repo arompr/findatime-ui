@@ -10,19 +10,35 @@ import {
   type IntervalMinutes,
 } from "@/lib/intervals";
 import { timezoneOptions } from "@/lib/timezones";
+import {
+  DAY_END_HOUR_OPTIONS,
+  DAY_START_HOUR_OPTIONS,
+  hourLabel,
+} from "@/lib/dayWindow";
+
+export type EventSettingsInput = {
+  timezone: string | null;
+  intervalMinutes: IntervalMinutes;
+  dayStartHour: number;
+  dayEndHour: number;
+};
 
 type EventSettingsModalProps = {
   timezone: string | null;
   intervalMinutes: IntervalMinutes;
+  dayStartHour: number;
+  dayEndHour: number;
   loading: boolean;
   error?: string;
   onClose: () => void;
-  onSave: (input: { timezone: string | null; intervalMinutes: IntervalMinutes }) => void;
+  onSave: (input: EventSettingsInput) => void;
 };
 
 export function EventSettingsModal({
   timezone,
   intervalMinutes,
+  dayStartHour,
+  dayEndHour,
   loading,
   error,
   onClose,
@@ -32,9 +48,15 @@ export function EventSettingsModal({
   const [selectedInterval, setSelectedInterval] = useState<IntervalMinutes>(
     intervalMinutes,
   );
+  const [selectedStart, setSelectedStart] = useState(dayStartHour);
+  const [selectedEnd, setSelectedEnd] = useState(dayEndHour);
   const zones = useMemo(() => timezoneOptions(timezone), [timezone]);
+  const windowValid = selectedStart < selectedEnd;
   const changed =
-    selectedInterval !== intervalMinutes || selectedTimezone !== (timezone ?? "");
+    selectedInterval !== intervalMinutes ||
+    selectedTimezone !== (timezone ?? "") ||
+    selectedStart !== dayStartHour ||
+    selectedEnd !== dayEndHour;
 
   return (
     <Modal title="Event settings" onClose={onClose}>
@@ -45,6 +67,8 @@ export function EventSettingsModal({
           onSave({
             timezone: selectedTimezone === "" ? null : selectedTimezone,
             intervalMinutes: selectedInterval,
+            dayStartHour: selectedStart,
+            dayEndHour: selectedEnd,
           });
         }}
       >
@@ -78,6 +102,52 @@ export function EventSettingsModal({
           </p>
         </div>
 
+        <div role="group" aria-labelledby="event-window-label" className="flex flex-col gap-1.5">
+          <span id="event-window-label" className="text-sm font-medium">
+            Calendar hours
+          </span>
+          <div className="flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <SelectInput
+                aria-label="Calendar starts at"
+                value={selectedStart}
+                onChange={(event) => setSelectedStart(Number(event.target.value))}
+              >
+                {DAY_START_HOUR_OPTIONS.map((hour) => (
+                  <option key={hour} value={hour}>
+                    {hourLabel(hour)}
+                  </option>
+                ))}
+              </SelectInput>
+            </div>
+            <span className="text-sm text-muted-foreground" aria-hidden>
+              to
+            </span>
+            <div className="min-w-0 flex-1">
+              <SelectInput
+                aria-label="Calendar ends at"
+                invalid={!windowValid}
+                value={selectedEnd}
+                onChange={(event) => setSelectedEnd(Number(event.target.value))}
+              >
+                {DAY_END_HOUR_OPTIONS.map((hour) => (
+                  <option key={hour} value={hour}>
+                    {hourLabel(hour)}
+                  </option>
+                ))}
+              </SelectInput>
+            </div>
+          </div>
+          {windowValid ? (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Hours shown on the calendar, in the timezone below (UTC when none is set).
+              Availability outside them is kept, just hidden.
+            </p>
+          ) : (
+            <ErrorText message="The end time must be after the start time." />
+          )}
+        </div>
+
         <Field
           label="Fallback timezone"
           hint="Only used when a viewer's own timezone can't be detected."
@@ -101,7 +171,7 @@ export function EventSettingsModal({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={loading} disabled={!changed}>
+          <Button type="submit" loading={loading} disabled={!changed || !windowValid}>
             Save changes
           </Button>
         </div>
