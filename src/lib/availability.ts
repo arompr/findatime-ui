@@ -1,14 +1,16 @@
 import dayjs from "dayjs";
 
-export type AvailabilitySelection = {
-  id: string;
+/** An availability range as an absolute UTC ISO instant pair. */
+export type AvailabilityRange = {
   startUtc: string;
   endUtc: string;
 };
 
-export type AvailabilitySelectionInput = {
-  startUtc: string;
-  endUtc: string;
+export type AvailabilitySelection = AvailabilityRange & {
+  id: string;
+};
+
+export type AvailabilitySelectionInput = AvailabilityRange & {
   id?: string;
 };
 
@@ -105,6 +107,11 @@ export function setSelections(
   emit();
 }
 
+export function clearSelections(publicId: string): void {
+  selectionsByEvent.delete(publicId);
+  emit();
+}
+
 export function removeSelection(publicId: string, id: string): void {
   selectionsByEvent.set(
     publicId,
@@ -152,4 +159,21 @@ export function moveSelection(
   newEndUtc: string,
 ): void {
   setSelectionRange(publicId, id, newStartUtc, newEndUtc);
+}
+
+/** Local calendar-day key (YYYY-MM-DD) of an instant, as the store groups ranges. */
+export function dayKeyOf(instant: string | number): string {
+  return dayjs(instant).format("YYYY-MM-DD");
+}
+
+/** Replaces every selection on the given local days with `added`. */
+export function replaceDays(
+  publicId: string,
+  dayKeys: string[],
+  added: AvailabilitySelectionInput[],
+): void {
+  const days = new Set(dayKeys);
+  const kept = getSelections(publicId).filter((selection) => !days.has(dayKeyOf(selection.startUtc)));
+  selectionsByEvent.set(publicId, mergeSelections(kept, added));
+  emit();
 }

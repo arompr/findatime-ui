@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Button } from "./ui/Button";
-import { TextInput } from "./ui/TextInput";
-import { Field } from "./ui/Field";
-import { ErrorText } from "./ui/ErrorText";
-import { Modal } from "./ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { TextInput } from "@/components/ui/TextInput";
+import { Field } from "@/components/ui/Field";
+import { ErrorText } from "@/components/ui/ErrorText";
+import { Modal } from "@/components/ui/Modal";
 
 type CreateEventModalProps = {
   loading: boolean;
@@ -22,9 +22,13 @@ export function CreateEventModal({
   const [organizerName, setOrganizerName] = useState("");
 
   return (
-    <Modal title="Create an event" onClose={onClose}>
+    <Modal
+      title="New event"
+      description="You'll get a link to share once it's created."
+      onClose={onClose}
+    >
       <form
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-4"
         onSubmit={(e) => {
           e.preventDefault();
           if (name.trim() && organizerName.trim()) {
@@ -32,7 +36,7 @@ export function CreateEventModal({
           }
         }}
       >
-        <Field label="Event name">
+        <Field label="What's it for?">
           <TextInput
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -40,17 +44,27 @@ export function CreateEventModal({
             autoFocus
           />
         </Field>
-        <Field label="Your name">
+        <Field label="Your name" hint="Shown to participants as the organizer.">
           <TextInput
             value={organizerName}
             onChange={(e) => setOrganizerName(e.target.value)}
             placeholder="e.g. Alex"
+            autoComplete="given-name"
           />
         </Field>
-        {error && <ErrorText message={error} />}
-        <Button type="submit" loading={loading} disabled={!name.trim() || !organizerName.trim()}>
-          Create event
-        </Button>
+        <ErrorText message={error} />
+        <div className="mt-1 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            loading={loading}
+            disabled={!name.trim() || !organizerName.trim()}
+          >
+            Create event
+          </Button>
+        </div>
       </form>
     </Modal>
   );
