@@ -1,38 +1,79 @@
 @import "tailwindcss";
 @plugin "tailwindcss-animate";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @source "../node_modules/@ilamy/calendar/dist";
 
+/* Warm ivory + ink palette with no accent colour: ink doubles as the accent.
+   Only the heat map is coloured, with the success green. @ilamy/calendar is
+   styled with the same shadcn-style tokens, so it follows the theme
+   automatically. */
 :root {
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  --background: #ffffff;
-  --foreground: #0f172a;
+  --background: #f9f5e9;
+  --foreground: #141413;
+  --card: #fefbf3;
+  --card-foreground: #141413;
+  --popover: #fefbf3;
+  --popover-foreground: #141413;
+  --primary: #141413;
+  --primary-foreground: #f9f5e9;
+  --secondary: #f0ebda;
+  --secondary-foreground: #141413;
+  --muted: #f0ebda;
+  --muted-foreground: #75715e;
+  --accent: #e8e2ce;
+  --accent-foreground: #141413;
+  --destructive: #b53d2e;
+  --destructive-foreground: #fefbf3;
+  --border: #e6decb;
+  --input: #d6cdb4;
+  --ring: #141413;
 
-  --card: #ffffff;
-  --card-foreground: #0f172a;
+  --brand: #141413;
+  --brand-strong: #141413;
+  --brand-foreground: #f9f5e9;
+  --success: #2f7d55;
+  /* Heat map: --success ("free") at four strengths over the card, so both
+     themes derive it from their own success/card colours. */
+  --heat-1: color-mix(in oklab, var(--success) 12%, var(--card));
+  --heat-2: color-mix(in oklab, var(--success) 22%, var(--card));
+  --heat-3: color-mix(in oklab, var(--success) 34%, var(--card));
+  --heat-4: color-mix(in oklab, var(--success) 48%, var(--card));
+  --shadow-color: 40 30 10;
 
-  --popover: #ffffff;
-  --popover-foreground: #0f172a;
+  color-scheme: light;
+}
 
-  --primary: #0f172a;
-  --primary-foreground: #f8fafc;
+html.dark {
+  --background: #1f1e1d;
+  --foreground: #efe4c9;
+  --card: #2a2927;
+  --card-foreground: #efe4c9;
+  --popover: #30302e;
+  --popover-foreground: #efe4c9;
+  --primary: #efe4c9;
+  --primary-foreground: #1f1e1d;
+  --secondary: #353431;
+  --secondary-foreground: #efe4c9;
+  --muted: #353431;
+  --muted-foreground: #a6a39a;
+  --accent: #3d3c38;
+  --accent-foreground: #efe4c9;
+  --destructive: #e0745f;
+  --destructive-foreground: #1f1e1d;
+  --border: #3b3a36;
+  --input: #4d4b46;
+  --ring: #efe4c9;
 
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
+  --brand: #efe4c9;
+  --brand-strong: #efe4c9;
+  --brand-foreground: #1f1e1d;
+  --success: #7fcf9f;
+  --shadow-color: 0 0 0;
 
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-
-  --destructive: #dc2626;
-  --destructive-foreground: #f8fafc;
-
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #94a3b8;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -55,23 +96,59 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-success: var(--success);
+
+  --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Manrope", "Geist", ui-sans-serif, system-ui, sans-serif;
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --shadow-soft: 0 1px 2px rgb(var(--shadow-color) / 0.05), 0 4px 16px -4px rgb(var(--shadow-color) / 0.08);
+  --shadow-lift: 0 2px 4px rgb(var(--shadow-color) / 0.08), 0 12px 32px -8px rgb(var(--shadow-color) / 0.25);
 }
 
-:root {
-  color-scheme: light;
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--brand) 25%, transparent);
+  }
 }
 
-body {
-  @apply antialiased text-slate-900;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }
 
 .droppable-cell {
   cursor: cell;
+}
+
+/* The grid is a gesture surface: a long press must never open the browser's
+   context menu, text selection loupe, or iOS link callout. */
+.findatime-calendar {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* @ilamy/calendar insets event wrappers by a --spacing-based gap; zero it so
@@ -90,27 +167,67 @@ body {
 }
 
 /* Others' availability is rendered as a cell-level heat map (see
-   getCellClassName in AvailabilityWeek), so it always spans the full day
-   column and never shifts when the current user's blocks overlap it. */
+   getCellClassName in AvailabilityCalendar), so it always spans the full day
+   column and never shifts when the current user's blocks overlap it. Stops are
+   opaque so each level looks identical on every surface. */
 .findatime-heat-1 {
-  background-color: rgba(22, 163, 74, 0.18);
+  background-color: var(--heat-1);
 }
 .findatime-heat-2 {
-  background-color: rgba(22, 163, 74, 0.36);
+  background-color: var(--heat-2);
 }
 .findatime-heat-3 {
-  background-color: rgba(22, 163, 74, 0.54);
+  background-color: var(--heat-3);
 }
 .findatime-heat-4 {
-  background-color: rgba(22, 163, 74, 0.72);
+  background-color: var(--heat-4);
+}
+
+/* Availability blocks size their own label: hidden when the block is too
+   short to fit it. */
+.findatime-block {
+  container-type: size;
+}
+@container (max-height: 26px) {
+  .findatime-block-label {
+    display: none;
+  }
+}
+
+/* Touch: a press on a block shrinks it slightly while the hold timer runs, so
+   the user feels the long press "charging" before the block lifts. */
+.findatime-block[data-pressing="true"] {
+  transform: scale(0.96);
+  transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes findatime-press-ring {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes findatime-press-pop {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.4);
+    opacity: 0;
+  }
 }
 
 /* In read mode the calendar is non-interactive; strip ilamy hover
    affordances (cell backgrounds, day-header buttons, "+ N more" link) so
    nothing suggests clickability. Selectors are written against Tailwind's
    emitted utility classes with the .findatime-readonly ancestor to win on
-   specificity without `!important`. CalendarHeader navigation buttons use
-   slate-100 and are intentionally left interactive. */
+   specificity without `!important`. */
 .findatime-readonly [class~="hover:bg-accent"]:hover,
 .findatime-readonly .hover\:bg-accent:hover {
   background-color: transparent;
@@ -120,6 +237,13 @@ body {
   color: inherit;
 }
 .findatime-readonly [class~="hover:bg-accent"],
-.findatime-readonly .hover\:bg-accent {
+.findatime-readonly .hover\:bg-accent,
+.findatime-readonly .droppable-cell {
   cursor: default;
+}
+
+/* Mobile day view: the custom header (title + week strip) already names the
+   day, so ilamy's own day header row is redundant. */
+.findatime-calendar [data-testid="vertical-grid-header"]:has(> [data-testid="day-view-header"]) {
+  display: none;
 }

@@ -33,11 +33,13 @@ export function EventSettingsModal({
     intervalMinutes,
   );
   const zones = useMemo(() => timezoneOptions(timezone), [timezone]);
+  const changed =
+    selectedInterval !== intervalMinutes || selectedTimezone !== (timezone ?? "");
 
   return (
     <Modal title="Event settings" onClose={onClose}>
       <form
-        className="flex flex-col gap-4"
+        className="flex flex-col gap-5"
         onSubmit={(event) => {
           event.preventDefault();
           onSave({
@@ -46,61 +48,61 @@ export function EventSettingsModal({
           });
         }}
       >
-        <Field label="Event timezone">
+        <div role="radiogroup" aria-labelledby="event-interval-label" className="flex flex-col gap-1.5">
+          <span id="event-interval-label" className="text-sm font-medium">
+            Time slot length
+          </span>
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-secondary p-1">
+            {INTERVAL_OPTIONS.map((option) => {
+              const selected = selectedInterval === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setSelectedInterval(option)}
+                  className={`min-h-10 cursor-pointer rounded-lg px-2 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] ${
+                    selected
+                      ? "bg-card text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {intervalLabel(option)}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            Sets the calendar grid. Availability people already shared stays as-is.
+          </p>
+        </div>
+
+        <Field
+          label="Fallback timezone"
+          hint="Only used when a viewer's own timezone can't be detected."
+        >
           <SelectInput
             value={selectedTimezone}
             onChange={(event) => setSelectedTimezone(event.target.value)}
           >
-            <option value="">Off — use each viewer's timezone</option>
+            <option value="">None — always use the viewer's timezone</option>
             {zones.map((zone) => (
               <option key={zone} value={zone}>
-                {zone}
+                {zone.replace(/_/g, " ")}
               </option>
             ))}
           </SelectInput>
         </Field>
-        <p className="-mt-2 text-xs text-slate-500">
-          Used only as a fallback when a viewer's timezone isn't known.
-        </p>
-
-        <div role="group" aria-labelledby="event-interval-label">
-          <span
-            id="event-interval-label"
-            className="mb-1 block text-sm text-slate-600"
-          >
-            Time slot length
-          </span>
-          <div className="grid grid-cols-3 gap-1 rounded-md border border-slate-300 p-1">
-            {INTERVAL_OPTIONS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={selectedInterval === option}
-                onClick={() => setSelectedInterval(option)}
-                className={`cursor-pointer rounded px-2 py-2 text-sm font-medium ${
-                  selectedInterval === option
-                    ? "bg-slate-900 text-white"
-                    : "text-slate-600 hover:bg-slate-100"
-                }`}
-              >
-                {intervalLabel(option)}
-              </button>
-            ))}
-          </div>
-        </div>
-        <p className="-mt-2 text-xs text-slate-500">
-          Changes the calendar's slot size. Availability that people already shared
-          stays as-is.
-        </p>
 
         <ErrorText message={error} />
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" loading={loading}>
-            Save
+          <Button type="submit" loading={loading} disabled={!changed}>
+            Save changes
           </Button>
         </div>
       </form>
