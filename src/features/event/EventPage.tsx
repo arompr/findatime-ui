@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { Settings } from "lucide-react";
+import { CalendarX2 } from "lucide-react";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { isNotJoined, messageFor } from "@/lib/errors";
-import { intervalLabel, toIntervalMinutes } from "@/lib/intervals";
+import { toIntervalMinutes } from "@/lib/intervals";
 import {
   useDeleteEvent,
   useEventByPublicId,
@@ -13,21 +14,43 @@ import {
   useUpdateEventParams,
 } from "./queries";
 import { AvailabilityCalendar } from "./AvailabilityCalendar";
-import { DeleteEventButton } from "./components/DeleteEventButton";
+import { EventHeader } from "./components/EventHeader";
 import { EventSettingsModal } from "./components/EventSettingsModal";
 import { JoinEventForm } from "./components/JoinEventForm";
-import { ParticipantBar } from "./components/ParticipantBar";
-import { ShareLinkButton } from "./components/ShareLinkButton";
 
 type EventPageProps = {
   publicId: string;
 };
 
+type Dialog = "settings" | "leave" | "delete" | null;
+
 function PageSkeleton() {
   return (
     <div className="animate-pulse" aria-hidden>
-      <div className="h-28 rounded-lg bg-slate-200/70" />
-      <div className="mt-4 h-[65dvh] min-h-[420px] rounded-lg bg-slate-200/70 sm:mt-8 sm:h-[560px] sm:min-h-0" />
+      <div className="h-9 w-2/3 rounded-lg bg-secondary" />
+      <div className="mt-3 flex gap-1.5">
+        <div className="h-7 w-28 rounded-full bg-secondary" />
+        <div className="h-7 w-24 rounded-full bg-secondary" />
+      </div>
+      <div className="mt-6 h-[65dvh] min-h-[420px] rounded-2xl bg-secondary sm:h-[600px] sm:min-h-0" />
+    </div>
+  );
+}
+
+function Notice({ title, children }: { title: string; children?: ReactNode }) {
+  return (
+    <div className="mx-auto mt-[10vh] flex max-w-sm flex-col items-center text-center animate-in fade-in duration-300">
+      <span className="inline-flex size-12 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+        <CalendarX2 className="size-6" aria-hidden />
+      </span>
+      <h1 className="mt-4 font-display text-2xl font-semibold tracking-tight">{title}</h1>
+      {children && <p className="mt-2 text-sm text-muted-foreground">{children}</p>}
+      <Link
+        to="/"
+        className="mt-6 inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium underline-offset-4 hover:underline"
+      >
+        Go to the home page
+      </Link>
     </div>
   );
 }
@@ -41,7 +64,7 @@ export function EventPage({ publicId }: EventPageProps) {
   const leaveMutation = useLeaveEvent();
   const updateParamsMutation = useUpdateEventParams();
   const deleteMutation = useDeleteEvent();
-  const [showSettings, setShowSettings] = useState(false);
+  const [dialog, setDialog] = useState<Dialog>(null);
 
   const participant = participantQuery.data;
   const event = eventQuery.data;
@@ -54,18 +77,21 @@ export function EventPage({ publicId }: EventPageProps) {
     content = <PageSkeleton />;
   } else if (eventQuery.isError) {
     content = (
-      <p className="text-sm text-slate-500">
-        {messageFor(eventQuery.error, "No event found.")}
-      </p>
+      <Notice title="Event not found">
+        {messageFor(eventQuery.error, "No event found.")} Double-check the link you were sent.
+      </Notice>
     );
   } else if (isNotJoined(participantQuery.error)) {
     content = (
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+      <div className="mx-auto mt-[6vh] w-full max-w-md rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] animate-in fade-in slide-in-from-bottom-2 duration-300 sm:p-6">
+        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          You're invited to
+        </p>
+        <h1 className="mt-1 text-balance font-display text-2xl font-semibold tracking-tight">
           {eventName}
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Enter your name to join and share when you're free.
+        <p className="mt-2 text-sm text-muted-foreground">
+          Add your name, then mark when you're free.
         </p>
         <div className="mt-5">
           <JoinEventForm
@@ -82,76 +108,35 @@ export function EventPage({ publicId }: EventPageProps) {
     );
   } else if (participantQuery.isError || participant === undefined || eventName === undefined) {
     content = (
-      <p className="text-sm text-slate-500">
-        {messageFor(participantQuery.error, "Something went wrong.")}
-      </p>
+      <Notice title="Something went wrong">
+        {messageFor(participantQuery.error, "Please try again in a moment.")}
+      </Notice>
     );
   } else {
     content = (
       <>
-        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-            {eventName}
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {intervalLabel(intervalMinutes)} time slots
-          </p>
-          <div className="mt-4 flex flex-col gap-3 sm:mt-5 sm:flex-row sm:items-start sm:justify-between">
-            <ParticipantBar
-              name={participant.name}
-              leaving={leaveMutation.isPending}
-              error={
-                leaveMutation.isError
-                  ? messageFor(leaveMutation.error, "Could not leave the event.")
-                  : undefined
-              }
-              onLeave={() => leaveMutation.mutate(publicId)}
-            />
-            <div className="flex flex-wrap gap-2 self-start">
-              <ShareLinkButton publicId={publicId} />
-              {isOrganizer && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      updateParamsMutation.reset();
-                      setShowSettings(true);
-                    }}
-                    className="inline-flex min-h-10 shrink-0 cursor-pointer items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-100"
-                  >
-                    <Settings className="size-4" aria-hidden />
-                    Settings
-                  </button>
-                  <DeleteEventButton
-                    eventName={eventName}
-                    loading={deleteMutation.isPending}
-                    error={
-                      deleteMutation.isError
-                        ? messageFor(
-                            deleteMutation.error,
-                            "Could not delete the event.",
-                          )
-                        : undefined
-                    }
-                    onOpen={deleteMutation.reset}
-                    onConfirm={() =>
-                      deleteMutation.mutate(publicId, {
-                        onSuccess: () => {
-                          void navigate({ to: "/" });
-                        },
-                      })
-                    }
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <EventHeader
+          publicId={publicId}
+          eventName={eventName}
+          participantName={participant.name}
+          intervalMinutes={intervalMinutes}
+          timezone={event?.timezone ?? null}
+          isOrganizer={isOrganizer}
+          onOpenSettings={() => {
+            updateParamsMutation.reset();
+            setDialog("settings");
+          }}
+          onLeave={() => {
+            leaveMutation.reset();
+            setDialog("leave");
+          }}
+          onDelete={() => {
+            deleteMutation.reset();
+            setDialog("delete");
+          }}
+        />
 
-        <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:mt-8 sm:p-6">
-          <h2 className="mb-2 text-lg font-semibold tracking-tight text-slate-900">
-            Your availability
-          </h2>
+        <div className="mt-6">
           <AvailabilityCalendar
             publicId={publicId}
             participantId={participant.participantId}
@@ -159,7 +144,7 @@ export function EventPage({ publicId }: EventPageProps) {
           />
         </div>
 
-        {showSettings && event && (
+        {dialog === "settings" && event && (
           <EventSettingsModal
             timezone={event.timezone}
             intervalMinutes={intervalMinutes}
@@ -169,27 +154,68 @@ export function EventPage({ publicId }: EventPageProps) {
                 ? messageFor(updateParamsMutation.error, "Could not save event settings.")
                 : undefined
             }
-            onClose={() => setShowSettings(false)}
+            onClose={() => setDialog(null)}
             onSave={(input) =>
               updateParamsMutation.mutate(
                 { publicId, ...input },
-                { onSuccess: () => setShowSettings(false) },
+                { onSuccess: () => setDialog(null) },
               )
             }
           />
+        )}
+
+        {dialog === "leave" && (
+          <ConfirmDialog
+            title="Leave this event?"
+            confirmLabel="Leave event"
+            destructive
+            loading={leaveMutation.isPending}
+            error={
+              leaveMutation.isError
+                ? messageFor(leaveMutation.error, "Could not leave the event.")
+                : undefined
+            }
+            onCancel={() => setDialog(null)}
+            onConfirm={() =>
+              leaveMutation.mutate(publicId, { onSuccess: () => setDialog(null) })
+            }
+          >
+            Your availability will be removed from{" "}
+            <span className="font-medium text-foreground">{eventName}</span>. You can rejoin
+            later with the same link.
+          </ConfirmDialog>
+        )}
+
+        {dialog === "delete" && (
+          <ConfirmDialog
+            title="Delete this event?"
+            confirmLabel="Delete event"
+            destructive
+            loading={deleteMutation.isPending}
+            error={
+              deleteMutation.isError
+                ? messageFor(deleteMutation.error, "Could not delete the event.")
+                : undefined
+            }
+            onCancel={() => setDialog(null)}
+            onConfirm={() =>
+              deleteMutation.mutate(publicId, {
+                onSuccess: () => {
+                  void navigate({ to: "/" });
+                },
+              })
+            }
+          >
+            <span className="font-medium text-foreground">{eventName}</span> and everyone's
+            availability will be permanently deleted. This can't be undone.
+          </ConfirmDialog>
         )}
       </>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-3 py-4 sm:px-4 sm:py-8">
-      <Link
-        to="/"
-        className="mb-4 inline-flex min-h-10 w-fit items-center text-sm text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
-      >
-        Back
-      </Link>
+    <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-3 pb-8 pt-2 sm:px-6 sm:pb-12 sm:pt-6">
       {content}
     </main>
   );

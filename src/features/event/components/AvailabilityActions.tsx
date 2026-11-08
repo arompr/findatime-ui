@@ -1,59 +1,184 @@
-import { Check } from "lucide-react";
+import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { Check, Hand, MousePointerClick, Move, Pencil, Pointer } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 
 export type AvailabilityMode = "read" | "edit";
 
-type AvailabilityActionsProps = {
+type ToolbarProps = {
   mode: AvailabilityMode;
-  isTouch: boolean;
+  dirty: boolean;
   saving: boolean;
-  saved: boolean;
-  error?: string;
+  justSaved: boolean;
+  canCancel: boolean;
   onEdit: () => void;
+  onCancel: () => void;
   onSave: () => void;
 };
 
-function editHint(isTouch: boolean): string {
-  return isTouch
-    ? "Tap slots to add them, or hold and drag across the grid to select a range. Hold a block to move it, hold its edges to resize, tap ✕ to remove it. Swipe sideways to change day."
-    : "Click or drag to mark when you're free. Drag a block to move it, drag its edges to resize it, or hover to delete it.";
+function Status({ mode, dirty, justSaved }: Pick<ToolbarProps, "mode" | "dirty" | "justSaved">) {
+  if (justSaved) {
+    return (
+      <span
+        key="saved"
+        className="inline-flex items-center gap-1 text-xs font-medium text-success animate-in fade-in zoom-in-95 duration-200"
+      >
+        <Check className="size-3.5" aria-hidden />
+        Saved
+      </span>
+    );
+  }
+  if (mode === "edit" && dirty) {
+    return (
+      <span
+        key="dirty"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-strong animate-in fade-in duration-200 dark:text-brand"
+      >
+        <span className="size-1.5 rounded-full bg-current" aria-hidden />
+        Unsaved changes
+      </span>
+    );
+  }
+  if (mode === "edit") {
+    return (
+      <span key="editing" className="text-xs font-medium text-muted-foreground">
+        Editing
+      </span>
+    );
+  }
+  return null;
 }
 
-export function AvailabilityActions({
-  mode,
-  isTouch,
+function SaveButtons({
+  dirty,
   saving,
-  saved,
-  error,
-  onEdit,
+  canCancel,
+  onCancel,
   onSave,
-}: AvailabilityActionsProps) {
+  className = "",
+}: Pick<ToolbarProps, "dirty" | "saving" | "canCancel" | "onCancel" | "onSave"> & {
+  className?: string;
+}) {
   return (
-    <div className="mt-4 flex flex-col gap-3">
-      <div className="flex flex-col-reverse items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <p className="text-sm text-slate-500">
-          {mode === "edit"
-            ? editHint(isTouch)
-            : `Read-only. ${isTouch ? "Tap" : "Click"} Edit to update your availability.`}
-          {mode === "read" && saved && (
-            <span className="mt-1 flex items-center gap-1 text-sm font-medium text-green-700">
-              <Check className="size-4" aria-hidden />
-              Availability saved
-            </span>
-          )}
-        </p>
-        {mode === "edit" ? (
-          <Button loading={saving} onClick={onSave} className="w-full shrink-0 sm:w-auto">
-            Save
-          </Button>
-        ) : (
-          <Button onClick={onEdit} className="w-full shrink-0 sm:w-auto">
-            Edit
-          </Button>
-        )}
-      </div>
-      <ErrorText message={error} />
+    <div className={`flex items-center gap-2 ${className}`}>
+      {canCancel && (
+        <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving} className="flex-1 sm:flex-none">
+          {dirty ? "Discard" : "Cancel"}
+        </Button>
+      )}
+      <Button
+        size="sm"
+        onClick={onSave}
+        loading={saving}
+        disabled={!dirty && !canCancel}
+        className="flex-[2] sm:flex-none sm:px-5"
+      >
+        {!saving && <Check className="size-4" aria-hidden />}
+        {dirty || !canCancel ? "Save" : "Done"}
+      </Button>
     </div>
+  );
+}
+
+/** Card header: title, live status, and Edit / Save controls. */
+export function AvailabilityToolbar(props: ToolbarProps) {
+  const { mode, onEdit } = props;
+  return (
+    <div className="flex min-h-10 items-center justify-between gap-3">
+      <div className="flex min-w-0 items-baseline gap-2.5">
+        <h2 className="text-base font-semibold tracking-tight">
+          {mode === "edit" ? "Mark when you're free" : "Everyone's availability"}
+        </h2>
+        <Status mode={props.mode} dirty={props.dirty} justSaved={props.justSaved} />
+      </div>
+      {mode === "read" ? (
+        <Button variant="secondary" size="sm" onClick={onEdit}>
+          <Pencil className="size-3.5" aria-hidden />
+          Edit mine
+        </Button>
+      ) : (
+        <SaveButtons {...props} className="hidden sm:flex" />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Mobile edit mode: Save/Cancel pinned to the bottom of the viewport so they
+ * stay reachable while scrolling the calendar.
+ */
+export function MobileSaveBar(props: ToolbarProps & { error?: string }) {
+  if (props.mode !== "edit") return null;
+  return createPortal(
+    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/90 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur-md animate-in slide-in-from-bottom-full duration-300 ease-out sm:hidden">
+      {props.error && (
+        <div className="mb-2">
+          <ErrorText message={props.error} />
+        </div>
+      )}
+      <SaveButtons {...props} className="w-full" />
+    </div>,
+    document.body,
+  );
+}
+
+type HintProps = {
+  isTouch: boolean;
+  hasSelection: boolean;
+  month?: boolean;
+};
+
+function HintItem({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <li className="inline-flex items-center gap-1.5">
+      <span className="text-muted-foreground/80" aria-hidden>
+        {icon}
+      </span>
+      {children}
+    </li>
+  );
+}
+
+export function EditHint({ isTouch, hasSelection, month = false }: HintProps) {
+  if (month) {
+    return (
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <HintItem icon={<MousePointerClick className="size-3.5" />}>
+          {isTouch ? "Tap" : "Click"} a day to set your times
+        </HintItem>
+        <HintItem icon={<Move className="size-3.5" />}>Drag across days to fill several</HintItem>
+      </ul>
+    );
+  }
+  if (isTouch && hasSelection) {
+    return (
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground animate-in fade-in duration-200">
+        <HintItem icon={<Move className="size-3.5" />}>Drag to move</HintItem>
+        <HintItem icon={<span className="inline-block size-2.5 rounded-full border-2 border-brand" />}>
+          Drag a knob to resize
+        </HintItem>
+        <HintItem icon={<Pointer className="size-3.5" />}>Tap outside to finish</HintItem>
+      </ul>
+    );
+  }
+  return (
+    <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+      {isTouch ? (
+        <>
+          <HintItem icon={<Pointer className="size-3.5" />}>Tap a slot to add it</HintItem>
+          <HintItem icon={<Hand className="size-3.5" />}>Hold, then drag for a range</HintItem>
+          <HintItem icon={<MousePointerClick className="size-3.5" />}>Tap a block to edit</HintItem>
+        </>
+      ) : (
+        <>
+          <HintItem icon={<MousePointerClick className="size-3.5" />}>Click or drag to add</HintItem>
+          <HintItem icon={<Move className="size-3.5" />}>Drag a block to move it</HintItem>
+          <HintItem icon={<span className="inline-block h-0.5 w-3 rounded-full bg-current" />}>
+            Drag its edges to resize
+          </HintItem>
+        </>
+      )}
+    </ul>
   );
 }

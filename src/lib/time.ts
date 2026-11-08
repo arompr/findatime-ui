@@ -24,3 +24,30 @@ export function wallClockToInstant(wallClock: string, tz: string): string {
 export function instantToWallClock(instant: string, tz: string): string {
   return dayjs(instant).tz(tz).format("YYYY-MM-DDTHH:mm:ss");
 }
+
+function clock(ms: number): string {
+  const time = dayjs(ms);
+  return time.minute() === 0 ? time.format("h") : time.format("h:mm");
+}
+
+/** "9 – 10:30 AM", "11:30 AM – 1 PM" in the browser's timezone. */
+export function formatTimeRange(startMs: number, endMs: number): string {
+  const start = dayjs(startMs);
+  if (start.isSame(start.startOf("day")) && dayjs(endMs).isSame(start.add(1, "day"))) {
+    return "All day";
+  }
+  const startMeridiem = dayjs(startMs).format("A");
+  const endMeridiem = dayjs(endMs).format("A");
+  return startMeridiem === endMeridiem
+    ? `${clock(startMs)} – ${clock(endMs)} ${endMeridiem}`
+    : `${clock(startMs)} ${startMeridiem} – ${clock(endMs)} ${endMeridiem}`;
+}
+
+/** "Today", "Tomorrow", or "Tue, Nov 10". */
+export function formatDayLabel(ms: number): string {
+  const day = dayjs(ms).startOf("day");
+  const today = dayjs().startOf("day");
+  if (day.isSame(today)) return "Today";
+  if (day.isSame(today.add(1, "day"))) return "Tomorrow";
+  return day.year() === today.year() ? day.format("ddd, MMM D") : day.format("ddd, MMM D, YYYY");
+}

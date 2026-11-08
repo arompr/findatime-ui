@@ -1,4 +1,6 @@
 import type { SelectHTMLAttributes } from "react";
+import { ChevronDown } from "lucide-react";
+import { inputClassName, inputStateClassName } from "./TextInput";
 
 type SelectInputProps = SelectHTMLAttributes<HTMLSelectElement> & {
   invalid?: boolean;
@@ -6,13 +8,16 @@ type SelectInputProps = SelectHTMLAttributes<HTMLSelectElement> & {
 
 export function SelectInput({ invalid = false, className = "", ...props }: SelectInputProps) {
   return (
-    <select
-      className={`w-full rounded-md border bg-white px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 ${
-        invalid
-          ? "border-red-400 focus-visible:ring-red-300"
-          : "border-slate-300 focus-visible:ring-slate-400"
-      } ${className}`}
-      {...props}
-    />
+    <div className="relative">
+      <select
+        aria-invalid={invalid || undefined}
+        className={`${inputClassName} ${inputStateClassName(invalid)} cursor-pointer appearance-none pr-10 ${className}`}
+        {...props}
+      />
+      <ChevronDown
+        className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden
+      />
+    </div>
   );
 }
