@@ -14,20 +14,36 @@ type TooltipProps = {
   side?: Side;
   /** Extra classes for the inline wrapper around the trigger. */
   className?: string;
+  /**
+   * Touch behavior: "hold" (press and hold, for triggers whose tap already does
+   * something) or "tap" (tap toggles, for purely informational triggers).
+   */
+  touchTrigger?: "tap" | "hold";
 };
 
 const HOVER_DELAY_MS = 350;
 const TOUCH_HOLD_MS = 450;
 const TOUCH_LINGER_MS = 1400;
+const TAP_AUTO_HIDE_MS = 3000;
+// Finger travel beyond this is a scroll/swipe, not a tap.
+const TAP_SLOP_PX = 10;
 
 /**
  * Hover (mouse) or keyboard-focus tooltip. On touch, pressing and holding the
- * trigger shows it briefly, the way native icon buttons do.
+ * trigger shows it briefly, the way native icon buttons do; with
+ * `touchTrigger="tap"` a tap toggles it instead.
  */
-export function Tooltip({ content, children, side = "top", className = "" }: TooltipProps) {
+export function Tooltip({
+  content,
+  children,
+  side = "top",
+  className = "",
+  touchTrigger = "hold",
+}: TooltipProps) {
   const triggerRef = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<number | null>(null);
+  const tapStartRef = useRef<{ x: number; y: number } | null>(null);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState<{ top: number; left: number; side: Side } | null>(
     null,
@@ -72,6 +88,15 @@ export function Tooltip({ content, children, side = "top", className = "" }: Too
     return () => window.removeEventListener("scroll", close, true);
   }, [open]);
 
+  useEffect(() => {
+    if (!open || touchTrigger !== "tap") return;
+    const closeOutside = (event: PointerEvent) => {
+      if (!triggerRef.current?.contains(event.target as Node)) hide();
+    };
+    document.addEventListener("pointerdown", closeOutside, true);
+    return () => document.removeEventListener("pointerdown", closeOutside, true);
+  }, [open, touchTrigger]);
+
   return (
     <>
       <span
@@ -86,12 +111,32 @@ export function Tooltip({ content, children, side = "top", className = "" }: Too
         onPointerDown={(event) => {
           if (event.pointerType === "mouse") {
             hide();
+          } else if (touchTrigger === "tap") {
+            tapStartRef.current = { x: event.clientX, y: event.clientY };
           } else {
             showAfter(TOUCH_HOLD_MS);
           }
         }}
         onPointerUp={(event) => {
           if (event.pointerType === "mouse") return;
+          if (touchTrigger === "tap") {
+            const start = tapStartRef.current;
+            tapStartRef.current = null;
+            if (
+              !start ||
+              Math.hypot(event.clientX - start.x, event.clientY - start.y) > TAP_SLOP_PX
+            ) {
+              return;
+            }
+            if (open) {
+              hide();
+            } else {
+              setOpen(true);
+              clearTimer();
+              timerRef.current = window.setTimeout(() => setOpen(false), TAP_AUTO_HIDE_MS);
+            }
+            return;
+          }
           if (open) {
             clearTimer();
             timerRef.current = window.setTimeout(() => setOpen(false), TOUCH_LINGER_MS);
@@ -99,7 +144,10 @@ export function Tooltip({ content, children, side = "top", className = "" }: Too
             clearTimer();
           }
         }}
-        onPointerCancel={hide}
+        onPointerCancel={() => {
+          tapStartRef.current = null;
+          hide();
+        }}
         onContextMenu={(event) => {
           if (open || timerRef.current !== null) event.preventDefault();
         }}

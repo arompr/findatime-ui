@@ -45,6 +45,7 @@ function Avatar({ participant }: { participant: ParticipantStatus }) {
   return (
     <Tooltip
       content={label}
+      touchTrigger="tap"
       className="relative -ml-1.5 first:ml-0 hover:z-10 focus-within:z-10"
     >
       <span
@@ -100,6 +101,7 @@ export function ResponsesSummary({
                 content={hidden
                   .map((participant) => participant.name)
                   .join(", ")}
+                touchTrigger="tap"
                 className="-ml-1.5"
               >
                 <span
@@ -129,7 +131,10 @@ export function ResponsesSummary({
               {freeLabel(peakCount, total)}
             </span>
           ) : (
-            <Tooltip content="Darker means more people are free; darkest means everyone">
+            <Tooltip
+              content="Darker means more people are free; darkest means everyone"
+              touchTrigger="tap"
+            >
               <span
                 tabIndex={0}
                 className="inline-flex cursor-default items-center gap-2 rounded-md text-xs text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

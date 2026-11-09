@@ -18,7 +18,7 @@ type Row = { zone: TimezoneInfo; tag?: string };
 
 /**
  * A searchable timezone combobox. Matches city, region, country-ish names
- * ("France", "Eastern"), abbreviations ("ET") and offsets ("GMT+1", "utc-5").
+ * ("France", "Eastern"), abbreviations ("ET") and offsets ("UTC+1", "gmt-5").
  */
 export function TimezonePicker({ value, onChange, id, invalid = false, ...rest }: TimezonePickerProps) {
   const listId = useId();

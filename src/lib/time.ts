@@ -15,25 +15,47 @@ export function browserTimezone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-/** Short display name for `tz`, e.g. "ET" for America/New_York. */
-export function timezoneShortName(tz: string, at: Date = new Date()): string {
-  for (const timeZoneName of ["shortGeneric", "short"] as const) {
-    try {
-      const part = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName })
-        .formatToParts(at)
-        .find((p) => p.type === "timeZoneName");
-      if (part) return part.value;
-    } catch {
-      // Older engines reject "shortGeneric"; fall through to "short".
-    }
+function intlZoneName(tz: string, timeZoneName: Intl.DateTimeFormatOptions["timeZoneName"], at: Date) {
+  try {
+    return new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName })
+      .formatToParts(at)
+      .find((p) => p.type === "timeZoneName")?.value;
+  } catch {
+    // Unknown id, or an older engine without the generic/offset styles.
+    return undefined;
   }
-  return tz.replace(/_/g, " ");
 }
 
-/** Readable place name for an IANA id, e.g. "New York" for America/New_York. */
-export function timezonePlaceName(tz: string): string {
+/**
+ * Short label for `tz`: a real abbreviation when English has one ("ET", "PT",
+ * "MST"), otherwise the UTC offset ("UTC+1"). Initials of the long name are
+ * avoided because they collide ("CT" is Central and Chile) or mislead ("CEST").
+ */
+export function timezoneShortName(tz: string, at: Date = new Date()): string {
   if (tz === "UTC" || tz === "Etc/UTC") return "UTC";
-  return (tz.split("/").pop() ?? tz).replace(/_/g, " ");
+  const generic = intlZoneName(tz, "shortGeneric", at);
+  if (generic && /^[A-Z]{2,5}$/.test(generic)) return generic;
+  // Intl writes offsets as "GMT+1"; people know them as "UTC+1".
+  const offset = intlZoneName(tz, "shortOffset", at) ?? intlZoneName(tz, "short", at);
+  return offset ? offset.replace(/^GMT/, "UTC") : tz.replace(/_/g, " ");
+}
+
+/**
+ * Zone name people recognize, e.g. "Eastern Time" for America/Toronto, rather
+ * than the IANA city (which reads as "Toronto" to someone in Montréal).
+ */
+export function timezoneDisplayName(tz: string, at: Date = new Date()): string {
+  if (tz === "UTC" || tz === "Etc/UTC") return "UTC";
+  const name = intlZoneName(tz, "longGeneric", at);
+  if (name && !name.startsWith("GMT")) return name;
+  return `${(tz.split("/").pop() ?? tz).replace(/_/g, " ")} time`;
+}
+
+/** "Eastern Time (ET)", "Central European Time (UTC+1)", "UTC". */
+export function timezoneFullName(tz: string, at: Date = new Date()): string {
+  const name = timezoneDisplayName(tz, at);
+  const short = timezoneShortName(tz, at);
+  return name === short ? name : `${name} (${short})`;
 }
 
 function clock(ms: number): string {

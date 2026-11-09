@@ -5,14 +5,13 @@ import { Tooltip } from "@/components/ui/Tooltip";
 
 type ShareLinkButtonProps = {
   publicId: string;
-  eventName: string;
 };
 
 /**
  * Opens the native share sheet on touch devices, otherwise copies the link to
  * the clipboard and confirms inline.
  */
-export function ShareLinkButton({ publicId, eventName }: ShareLinkButtonProps) {
+export function ShareLinkButton({ publicId }: ShareLinkButtonProps) {
   const [copied, setCopied] = useState(false);
   const timerRef = useRef<number | null>(null);
   const url = `${window.location.origin}/events/${publicId}`;
@@ -41,7 +40,7 @@ export function ShareLinkButton({ publicId, eventName }: ShareLinkButtonProps) {
     const canShare = "share" in navigator && window.matchMedia("(hover: none)").matches;
     if (canShare) {
       try {
-        await navigator.share({ title: eventName, text: `When are you free for ${eventName}?`, url });
+        await navigator.share({ url });
       } catch {
         // Dismissed share sheet — nothing to do.
       }

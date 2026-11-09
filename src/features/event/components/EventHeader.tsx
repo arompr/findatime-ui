@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Menu, type MenuItem } from "@/components/ui/Menu";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { intervalLabel, type IntervalMinutes } from "@/lib/intervals";
-import { browserTimezone, timezonePlaceName } from "@/lib/time";
+import { browserTimezone, timezoneFullName, timezoneShortName } from "@/lib/time";
 import { ShareLinkButton } from "./ShareLinkButton";
 
 type EventHeaderProps = {
@@ -26,9 +26,17 @@ type EventHeaderProps = {
   onDelete: () => void;
 };
 
+// Longest chip text (prefix included) shown in full; longer names fall back to the abbreviation.
+const CHIP_TEXT_MAX = 28;
+
+function timezoneChipText(tz: string, prefix = "") {
+  const full = `${prefix}${timezoneFullName(tz)}`;
+  return full.length <= CHIP_TEXT_MAX ? full : `${prefix}${timezoneShortName(tz)}`;
+}
+
 function MetaChip({ icon, children, tooltip }: { icon: ReactNode; children: ReactNode; tooltip: ReactNode }) {
   return (
-    <Tooltip content={tooltip}>
+    <Tooltip content={tooltip} touchTrigger="tap">
       <span
         tabIndex={0}
         className="inline-flex h-7 cursor-default items-center gap-1.5 rounded-full border border-border bg-card px-2.5 text-xs font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -36,7 +44,7 @@ function MetaChip({ icon, children, tooltip }: { icon: ReactNode; children: Reac
         <span className="shrink-0" aria-hidden>
           {icon}
         </span>
-        <span className="max-w-40 truncate">{children}</span>
+        <span className="max-w-56 truncate">{children}</span>
       </span>
     </Tooltip>
   );
@@ -100,23 +108,23 @@ export function EventHeader({
           </MetaChip>
           <MetaChip
             icon={<MapPin className="size-3.5" />}
-            tooltip={`Times are shown in your timezone. The calendar runs ${hoursLabel}.`}
+            tooltip={`Times are shown in your timezone, ${timezoneFullName(viewerTimezone)}. The calendar runs ${hoursLabel}.`}
           >
-            {timezonePlaceName(viewerTimezone)} time
+            {timezoneChipText(viewerTimezone)}
           </MetaChip>
           {eventHoursLabel && (
             <MetaChip
               icon={<Globe className="size-3.5" />}
-              tooltip={`This event is set in ${timezonePlaceName(timezone ?? "UTC")} time, ${eventHoursLabel}.`}
+              tooltip={`This event is set in ${timezoneFullName(timezone ?? "UTC")}, ${eventHoursLabel}.`}
             >
-              Event in {timezonePlaceName(timezone ?? "UTC")} time
+              {timezoneChipText(timezone ?? "UTC", "Event in ")}
             </MetaChip>
           )}
         </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        <ShareLinkButton publicId={publicId} eventName={eventName} />
+        <ShareLinkButton publicId={publicId} />
         <Menu
           items={items}
           trigger={(triggerProps) => (

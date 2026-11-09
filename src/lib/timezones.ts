@@ -26,7 +26,7 @@ export type TimezoneInfo = {
   place: string;
   /** "America", "America · Argentina"; empty for UTC. */
   region: string;
-  /** "GMT-5" */
+  /** "UTC-5" */
   offset: string;
   /** Minutes east of UTC right now, for ordering. */
   offsetMinutes: number;
@@ -63,19 +63,19 @@ export function timezoneInfo(id: string, at: Date = new Date()): TimezoneInfo {
   const segments = id.split("/");
   const place = isUtc ? "UTC" : (segments.at(-1) ?? id).replace(/_/g, " ");
   const region = isUtc ? "" : segments.slice(0, -1).join(" · ").replace(/_/g, " ");
-  const offset = isUtc ? "GMT" : zoneName(id, "shortOffset", at) || "GMT";
-  const offsetMinutes = parseOffset(offset);
+  const gmtOffset = isUtc ? "GMT" : zoneName(id, "shortOffset", at) || "GMT";
+  const offsetMinutes = parseOffset(gmtOffset);
+  const offset = gmtOffset.replace("GMT", "UTC");
   // Generic names carry the country or area people search for:
   // "France Time", "Central European Time", "Eastern Time", "ET".
   const names = [zoneName(id, "shortGeneric", at), zoneName(id, "longGeneric", at), zoneName(id, "long", at)];
-  const utcAlias = offset.replace("GMT", "UTC");
   const haystack = normalize(
     [
       id.replace(/[/_]/g, " "),
       place,
       region,
       offset,
-      utcAlias,
+      gmtOffset,
       ...names,
       isUtc ? "coordinated universal time" : "",
     ].join(" | "),
