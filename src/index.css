@@ -202,6 +202,20 @@ html.dark {
   }
 }
 
+/* Narrow blocks (phone week view): a top-right remove button would cover the
+   top resize edge and its knob, so it moves to the middle, clear of both
+   edges. */
+@container (max-width: 64px) {
+  .findatime-block-delete {
+    top: 50%;
+    right: auto;
+    left: 50%;
+    width: 1.5rem;
+    height: 1.5rem;
+    translate: -50% -50%;
+  }
+}
+
 /* Touch: a press on a block shrinks it slightly while the hold timer runs, so
    the user feels the long press "charging" before the block lifts. */
 .findatime-block[data-pressing="true"] {

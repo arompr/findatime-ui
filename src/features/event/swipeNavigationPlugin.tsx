@@ -17,8 +17,8 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * Mobile day view: the day follows the finger on a horizontal swipe and flips
- * to the previous/next day when released past a distance or velocity
+ * Mobile: the visible day/week/month follows the finger on a horizontal swipe
+ * and flips to the previous/next period when released past a distance or velocity
  * threshold, otherwise springs back.
  *
  * A finger that holds still for HOLD_MS belongs to the drag-to-create / block

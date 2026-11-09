@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useCreateEvent, useEnsureGuestId } from "./queries.ts";
 import { JoinCodeForm } from "./components/JoinCodeForm";
 import { CreateEventModal } from "./components/CreateEventModal";
-import { AiPolicyModal } from "./components/AiPolicyModal";
+import { FooterLinks } from "./components/FooterLinks";
 
 const STEPS = [
   { icon: CalendarPlus, label: "Create an event" },
@@ -26,7 +26,6 @@ export function HomePage() {
   const navigate = useNavigate();
   const [publicId, setPublicId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-  const [showAiPolicy, setShowAiPolicy] = useState(false);
 
   useEnsureGuestId();
 
@@ -137,18 +136,8 @@ export function HomePage() {
       </ol>
 
       <footer className="mt-auto flex justify-center pt-10 text-xs text-muted-foreground">
-        <button
-          type="button"
-          onClick={() => setShowAiPolicy(true)}
-          className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg px-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <span className="underline decoration-border underline-offset-4">
-            How I use AI
-          </span>
-        </button>
+        <FooterLinks />
       </footer>
-
-      {showAiPolicy && <AiPolicyModal onClose={() => setShowAiPolicy(false)} />}
 
       {showCreate && (
         <CreateEventModal

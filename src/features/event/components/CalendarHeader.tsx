@@ -6,10 +6,18 @@ import { Button } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
-const views = [
+type ViewOption = { name: "day" | "week" | "month"; label: string };
+
+const desktopViews: readonly ViewOption[] = [
   { name: "week", label: "Week" },
   { name: "month", label: "Month" },
-] as const;
+];
+
+const mobileViews: readonly ViewOption[] = [
+  { name: "day", label: "Day" },
+  { name: "week", label: "Week" },
+  { name: "month", label: "Month" },
+];
 
 type CalendarHeaderProps = {
   /** Days (YYYY-MM-DD, local) that have any availability, dotted in the mobile week strip. */
@@ -107,33 +115,77 @@ function WeekStrip({ markedDays }: CalendarHeaderProps) {
   );
 }
 
+function weekTitle(start: Dayjs, end: Dayjs, short = false): string {
+  if (short) {
+    return start.isSame(end, "month")
+      ? `${start.format("MMM D")} – ${end.format("D")}`
+      : `${start.format("MMM D")} – ${end.format("MMM D")}`;
+  }
+  return start.isSame(end, "month")
+    ? `${start.format("MMMM D")} – ${end.format("D, YYYY")}`
+    : `${start.format("MMM D")} – ${end.format("MMM D, YYYY")}`;
+}
+
+function ViewSwitch({ options, fill = false }: { options: readonly ViewOption[]; fill?: boolean }) {
+  const { view, setView } = useIlamyCalendarContext();
+  return (
+    <div
+      className={`items-center gap-0.5 rounded-lg bg-secondary p-0.5 ${fill ? "grid grid-cols-3" : "flex"}`}
+      role="radiogroup"
+      aria-label="Calendar view"
+    >
+      {options.map((option) => (
+        <button
+          key={option.name}
+          type="button"
+          role="radio"
+          aria-checked={view === option.name}
+          onClick={() => setView(option.name)}
+          className={`cursor-pointer rounded-md px-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            fill ? "h-9" : "h-8"
+          } ${
+            view === option.name
+              ? "bg-card text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function CalendarHeader({ markedDays }: CalendarHeaderProps) {
-  const { view, setView, currentDate, currentRange } = useIlamyCalendarContext();
+  const { view, currentDate, currentRange } = useIlamyCalendarContext();
   const isMobile = useIsMobile();
 
   if (isMobile) {
+    const isDay = view === "day";
+    const mobileTitle = isDay
+      ? dayTitle(currentDate)
+      : view === "week"
+        ? weekTitle(currentRange.start, currentRange.end, true)
+        : currentDate.format("MMMM YYYY");
     return (
       <div className="mb-2 flex shrink-0 flex-col gap-3 px-1 pt-1">
         <div className="flex items-center justify-between gap-2">
           <span className="min-w-0 truncate font-display text-lg font-semibold tracking-tight">
-            {dayTitle(currentDate)}
+            {mobileTitle}
           </span>
           <div className="flex shrink-0 items-center gap-1.5">
             <TodayButton />
-            <PeriodNav unit="week" jumpWeeks />
+            <PeriodNav unit={view === "month" ? "month" : "week"} jumpWeeks={isDay} />
           </div>
         </div>
-        <WeekStrip markedDays={markedDays} />
+        <ViewSwitch options={mobileViews} fill />
+        {isDay && <WeekStrip markedDays={markedDays} />}
       </div>
     );
   }
 
   const title =
-    view === "week"
-      ? currentRange.start.isSame(currentRange.end, "month")
-        ? `${currentRange.start.format("MMMM D")} – ${currentRange.end.format("D, YYYY")}`
-        : `${currentRange.start.format("MMM D")} – ${currentRange.end.format("MMM D, YYYY")}`
-      : currentDate.format("MMMM YYYY");
+    view === "week" ? weekTitle(currentRange.start, currentRange.end) : currentDate.format("MMMM YYYY");
 
   return (
     <div className="mb-2 flex shrink-0 items-center justify-between gap-2 p-1">
@@ -144,28 +196,7 @@ export function CalendarHeader({ markedDays }: CalendarHeaderProps) {
       </div>
 
       <div className="flex min-w-0 shrink-0 items-center gap-3">
-        <div
-          className="flex items-center gap-0.5 rounded-lg bg-secondary p-0.5"
-          role="radiogroup"
-          aria-label="Calendar view"
-        >
-          {views.map((option) => (
-            <button
-              key={option.name}
-              type="button"
-              role="radio"
-              aria-checked={view === option.name}
-              onClick={() => setView(option.name)}
-              className={`h-8 cursor-pointer rounded-md px-3 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                view === option.name
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+        <ViewSwitch options={desktopViews} />
       </div>
     </div>
   );

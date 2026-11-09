@@ -103,7 +103,7 @@ export function AvailabilityBlock({
           event.preventDefault();
           onDelete();
         }}
-        className={`absolute right-0.5 top-0.5 inline-flex cursor-pointer items-center justify-center rounded-md bg-foreground text-background shadow-sm transition-[opacity,transform] duration-150 hover:bg-destructive active:scale-90 ${
+        className={`findatime-block-delete absolute right-0.5 top-0.5 inline-flex cursor-pointer items-center justify-center rounded-md bg-foreground text-background shadow-sm transition-[opacity,transform] duration-150 hover:bg-destructive active:scale-90 ${
           selected
             ? "pointer-events-auto size-6 opacity-100 animate-in zoom-in-75 [@media(hover:none)]:size-7"
             : "pointer-events-none size-5 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 [@media(hover:none)]:hidden"

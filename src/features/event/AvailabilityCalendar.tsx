@@ -390,10 +390,15 @@ export function AvailabilityCalendar({
     if (target) navigatorRef.current?.setCurrentDate(dayjs(target.startMs));
   };
 
-  const openWeek = useCallback((date: Dayjs) => {
-    setInspection(null);
-    navigatorRef.current?.setView("week", date);
-  }, []);
+  // Phones drill into a single day; a week's columns are too narrow there to
+  // read the detail a tap is asking for.
+  const openPeriod = useCallback(
+    (date: Dayjs) => {
+      setInspection(null);
+      navigatorRef.current?.setView(isMobile ? "day" : "week", date);
+    },
+    [isMobile],
+  );
 
   const openDayForm = useCallback((date: Dayjs) => {
     const start = date.startOf("day");
@@ -425,7 +430,8 @@ export function AvailabilityCalendar({
             endMs={event.end.valueOf()}
             count={data.count}
             total={total}
-            onClick={() => openWeek(dayjs(data.dayStartMs))}
+            compact={isMobile}
+            onClick={() => openPeriod(dayjs(data.dayStartMs))}
           />
         );
       }
@@ -434,6 +440,7 @@ export function AvailabilityCalendar({
           <MonthRangeChip
             startMs={event.start.valueOf()}
             endMs={event.end.valueOf()}
+            compact={isMobile}
             onClick={() => openDayForm(event.start)}
           />
         );
@@ -453,7 +460,7 @@ export function AvailabilityCalendar({
         />
       );
     },
-    [publicId, activeSelectedId, handleSelectBlock, total, openWeek, openDayForm],
+    [publicId, activeSelectedId, handleSelectBlock, total, isMobile, openPeriod, openDayForm],
   );
 
   const plugins = useMemo(() => {
@@ -700,7 +707,7 @@ export function AvailabilityCalendar({
               onHighlightBestChange={handleHighlightBestChange}
               onBestTimeClick={(startMs) =>
                 isMonth
-                  ? openWeek(dayjs(startMs))
+                  ? openPeriod(dayjs(startMs))
                   : navigatorRef.current?.setCurrentDate(dayjs(startMs))
               }
             />
@@ -753,15 +760,15 @@ export function AvailabilityCalendar({
             renderEvent={renderEvent}
             getCellClassName={getCellClassName}
             plugins={plugins}
-            onCellClick={isMonth ? (mode === "edit" ? undefined : (info) => openWeek(info.start)) : handleCellClick}
+            onCellClick={isMonth ? (mode === "edit" ? undefined : (info) => openPeriod(info.start)) : handleCellClick}
             disableCellClick={mode !== "edit" && !isMonth}
             onViewChange={handleViewChange}
             renderEventForm={renderEventForm}
-            onMoreEventsClick={(day) => (mode === "edit" ? openDayForm(day) : openWeek(day))}
+            onMoreEventsClick={(day) => (mode === "edit" ? openDayForm(day) : openPeriod(day))}
             dayMaxEvents={MONTH_MAX_EVENTS}
             eventHeight={MONTH_EVENT_HEIGHT}
             headerComponent={<CalendarHeader markedDays={markedDays} />}
-            initialView={isMobile ? "day" : calendarView}
+            initialView={calendarView}
             firstDayOfWeek="monday"
             slotDuration={intervalMinutes}
             timeFormat="12-hour"

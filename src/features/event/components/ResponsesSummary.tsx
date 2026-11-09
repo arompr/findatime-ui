@@ -1,4 +1,4 @@
-import { Sparkles, Target } from "lucide-react";
+import { CalendarCheck, Target } from "lucide-react";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { formatDayLabel, formatTimeRange } from "@/lib/time";
 
@@ -173,7 +173,7 @@ export function ResponsesSummary({
       {bestTimes.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5 animate-in fade-in duration-300">
           <span className="mr-1 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
-            <Sparkles className="size-3.5 text-brand" aria-hidden />
+            <CalendarCheck className="size-3.5 text-brand" aria-hidden />
             {bestTimes[0].count >= total
               ? "Everyone's free"
               : "Most people free"}

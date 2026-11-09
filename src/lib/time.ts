@@ -76,6 +76,11 @@ export function formatTimeRange(startMs: number, endMs: number): string {
     : `${clock(startMs)} ${startMeridiem} – ${clock(endMs)} ${endMeridiem}`;
 }
 
+/** "9a", "11:30p": a start time that fits a phone-width month cell. */
+export function formatShortTime(ms: number): string {
+  return `${clock(ms)}${dayjs(ms).format("a").charAt(0)}`;
+}
+
 /** "Today", "Tomorrow", or "Tue, Nov 10". */
 export function formatDayLabel(ms: number): string {
   const day = dayjs(ms).startOf("day");

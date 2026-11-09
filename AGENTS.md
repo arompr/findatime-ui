@@ -18,9 +18,12 @@ overlap with a "best window" chip. In edit mode, clicking a day (or dragging
 across several) opens `DayAvailabilityForm` through ilamy's event-form hook
 (`renderEventForm` / `openEventForm`), which replaces those days' ranges.
 
-The UI is mobile-first: below the `sm` breakpoint the calendar shows a single
-day (swipe or arrows to change days) and block interactions use press-and-hold
-drag; hover affordances stay visible on touch devices.
+The UI is mobile-first: below the `sm` breakpoint the calendar opens on a
+single day (swipe or arrows to change days) with a Day / Week / Month switch;
+swipe moves by the current view's period, month chips shrink to a start time or
+overlap count, and tapping a month day opens that day rather than its week.
+Block interactions use press-and-hold drag; hover affordances stay visible on
+touch devices.
 
 ## Tech stack
 
@@ -57,7 +60,8 @@ src/
     HomePage.tsx            Smart: join-by-code flow, create modal
     MyEventsMenu.tsx        Smart: "Your events" popover in the app header
     queries.ts              TanStack Query hooks (my events, create event, guestId)
-    components/             Dumb components (JoinCodeForm, CreateEventModal, MyEventsList)
+    components/             Dumb components (JoinCodeForm, CreateEventModal, MyEventsList,
+                            FooterLinks)
   features/event/
     EventPage.tsx           Smart: event + participant state machine (loading/not-joined/joined)
     AvailabilityCalendar.tsx Smart: draft store <-> server availability, calendar plugins, save
