@@ -44,7 +44,7 @@ export function Modal({ title, description, children, onClose }: ModalProps) {
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-[#141413]/45 backdrop-blur-[2px] animate-in fade-in duration-200 sm:items-center sm:p-4"
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-overlay backdrop-blur-[2px] animate-in fade-in duration-200 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div

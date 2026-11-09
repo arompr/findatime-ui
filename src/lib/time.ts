@@ -30,6 +30,12 @@ export function timezoneShortName(tz: string, at: Date = new Date()): string {
   return tz.replace(/_/g, " ");
 }
 
+/** Readable place name for an IANA id, e.g. "New York" for America/New_York. */
+export function timezonePlaceName(tz: string): string {
+  if (tz === "UTC" || tz === "Etc/UTC") return "UTC";
+  return (tz.split("/").pop() ?? tz).replace(/_/g, " ");
+}
+
 function clock(ms: number): string {
   const time = dayjs(ms);
   return time.minute() === 0 ? time.format("h") : time.format("h:mm");

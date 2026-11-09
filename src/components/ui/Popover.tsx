@@ -56,6 +56,24 @@ export function Popover({
     );
   }, [open, anchor, side, align, children, layoutTick]);
 
+  // Hidden elements can't take focus, and the panel stays computed-hidden for
+  // a frame or two after it's positioned (the reveal animates), so
+  // `[data-autofocus]` is retried each frame until it sticks.
+  const placed = position !== null;
+  useEffect(() => {
+    if (!placed) return;
+    let frame = 0;
+    let attempts = 0;
+    const tryFocus = () => {
+      const target = panelRef.current?.querySelector<HTMLElement>("[data-autofocus]");
+      if (!target) return;
+      target.focus();
+      if (document.activeElement !== target && ++attempts < 10) frame = requestAnimationFrame(tryFocus);
+    };
+    frame = requestAnimationFrame(tryFocus);
+    return () => cancelAnimationFrame(frame);
+  }, [placed]);
+
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {

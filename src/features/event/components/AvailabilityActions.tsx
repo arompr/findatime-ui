@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Check, Hand, MousePointerClick, Move, Pencil, Plus, Pointer } from "lucide-react";
+import {
+  Check,
+  Hand,
+  MousePointerClick,
+  Move,
+  Pencil,
+  Plus,
+  Pointer,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 
@@ -17,7 +25,11 @@ type ToolbarProps = {
   onSave: () => void;
 };
 
-function Status({ mode, dirty, justSaved }: Pick<ToolbarProps, "mode" | "dirty" | "justSaved">) {
+function Status({
+  mode,
+  dirty,
+  justSaved,
+}: Pick<ToolbarProps, "mode" | "dirty" | "justSaved">) {
   if (justSaved) {
     return (
       <span
@@ -33,7 +45,7 @@ function Status({ mode, dirty, justSaved }: Pick<ToolbarProps, "mode" | "dirty" 
     return (
       <span
         key="dirty"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-brand-strong animate-in fade-in duration-200 dark:text-brand"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-brand animate-in fade-in duration-200"
       >
         <span className="size-1.5 rounded-full bg-current" aria-hidden />
         Unsaved changes
@@ -61,10 +73,21 @@ function SaveButtons({
 }) {
   return (
     <div className={`flex items-center gap-2 ${className}`}>
-      <Button variant="ghost" size="sm" onClick={onCancel} disabled={saving} className="flex-1 sm:flex-none">
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={onCancel}
+        disabled={saving}
+        className="flex-1 sm:flex-none"
+      >
         {dirty ? "Discard" : "Cancel"}
       </Button>
-      <Button size="sm" onClick={onSave} loading={saving} className="flex-[2] sm:flex-none sm:px-5">
+      <Button
+        size="sm"
+        onClick={onSave}
+        loading={saving}
+        className="flex-[2] sm:flex-none sm:px-5"
+      >
         {!saving && <Check className="size-4" aria-hidden />}
         {dirty ? "Save" : "Done"}
       </Button>
@@ -78,21 +101,27 @@ export function AvailabilityToolbar(props: ToolbarProps) {
   return (
     <div className="flex min-h-10 items-center justify-between gap-3">
       <div className="flex min-w-0 items-baseline gap-2.5">
-        <h2 className="text-base font-semibold tracking-tight">
-          {mode === "edit" ? "Mark when you're free" : "Everyone's availability"}
+        <h2 className="font-display text-base font-semibold tracking-tight">
+          {mode === "edit"
+            ? "Mark when you're free"
+            : "Everyone's availability"}
         </h2>
-        <Status mode={props.mode} dirty={props.dirty} justSaved={props.justSaved} />
+        <Status
+          mode={props.mode}
+          dirty={props.dirty}
+          justSaved={props.justSaved}
+        />
       </div>
       {mode === "read" ? (
         hasServerRanges ? (
           <Button variant="secondary" size="sm" onClick={onEdit}>
             <Pencil className="size-3.5" aria-hidden />
-            Edit my times
+            Change a time
           </Button>
         ) : (
           <Button size="sm" onClick={onEdit}>
             <Plus className="size-4" aria-hidden />
-            Add my times
+            Add a time
           </Button>
         )
       ) : (
@@ -127,7 +156,13 @@ type HintProps = {
   month?: boolean;
 };
 
-function HintItem({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+function HintItem({
+  icon,
+  children,
+}: {
+  icon: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <li className="inline-flex items-center gap-1.5">
       <span className="text-muted-foreground/80" aria-hidden>
@@ -145,7 +180,9 @@ export function EditHint({ isTouch, hasSelection, month = false }: HintProps) {
         <HintItem icon={<MousePointerClick className="size-3.5" />}>
           {isTouch ? "Tap" : "Click"} a day to set your times
         </HintItem>
-        <HintItem icon={<Move className="size-3.5" />}>Drag across days to fill several</HintItem>
+        <HintItem icon={<Move className="size-3.5" />}>
+          Drag across days to fill several
+        </HintItem>
       </ul>
     );
   }
@@ -153,10 +190,16 @@ export function EditHint({ isTouch, hasSelection, month = false }: HintProps) {
     return (
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground animate-in fade-in duration-200">
         <HintItem icon={<Move className="size-3.5" />}>Drag to move</HintItem>
-        <HintItem icon={<span className="inline-block size-2.5 rounded-full border-2 border-brand" />}>
-          Drag a knob to resize
+        <HintItem
+          icon={
+            <span className="inline-block size-2.5 rounded-full border-2 border-brand" />
+          }
+        >
+          Drag a dot to adjust
         </HintItem>
-        <HintItem icon={<Pointer className="size-3.5" />}>Tap outside to finish</HintItem>
+        <HintItem icon={<Pointer className="size-3.5" />}>
+          Tap elsewhere when done
+        </HintItem>
       </ul>
     );
   }
@@ -164,16 +207,30 @@ export function EditHint({ isTouch, hasSelection, month = false }: HintProps) {
     <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
       {isTouch ? (
         <>
-          <HintItem icon={<Pointer className="size-3.5" />}>Tap a slot to add it</HintItem>
-          <HintItem icon={<Hand className="size-3.5" />}>Hold, then drag for a range</HintItem>
-          <HintItem icon={<MousePointerClick className="size-3.5" />}>Tap a block to edit</HintItem>
+          <HintItem icon={<Pointer className="size-3.5" />}>
+            Tap to add a time
+          </HintItem>
+          <HintItem icon={<Hand className="size-3.5" />}>
+            Hold and drag for longer
+          </HintItem>
+          <HintItem icon={<MousePointerClick className="size-3.5" />}>
+            Tap a time to change it
+          </HintItem>
         </>
       ) : (
         <>
-          <HintItem icon={<MousePointerClick className="size-3.5" />}>Click or drag to add</HintItem>
-          <HintItem icon={<Move className="size-3.5" />}>Drag a block to move it</HintItem>
-          <HintItem icon={<span className="inline-block h-0.5 w-3 rounded-full bg-current" />}>
-            Drag its edges to resize
+          <HintItem icon={<MousePointerClick className="size-3.5" />}>
+            Click or drag to add
+          </HintItem>
+          <HintItem icon={<Move className="size-3.5" />}>
+            Drag a time to move it
+          </HintItem>
+          <HintItem
+            icon={
+              <span className="inline-block h-0.5 w-3 rounded-full bg-current" />
+            }
+          >
+            Drag its edges to adjust
           </HintItem>
         </>
       )}

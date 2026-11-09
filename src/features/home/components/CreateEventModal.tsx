@@ -44,7 +44,7 @@ export function CreateEventModal({
             autoFocus
           />
         </Field>
-        <Field label="Your name" hint="Shown to participants as the organizer.">
+        <Field label="Your name" hint="Shown to everyone as the organizer.">
           <TextInput
             value={organizerName}
             onChange={(e) => setOrganizerName(e.target.value)}
@@ -54,7 +54,7 @@ export function CreateEventModal({
         </Field>
         <ErrorText message={error} />
         <div className="mt-1 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button

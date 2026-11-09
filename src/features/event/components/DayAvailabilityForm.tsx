@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import dayjs, { type Dayjs } from "dayjs";
 import { Plus, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { IconButton } from "@/components/ui/IconButton";
 import { Modal } from "@/components/ui/Modal";
 import { SelectInput } from "@/components/ui/SelectInput";
@@ -98,8 +98,8 @@ export function DayAvailabilityForm({
       title={daysTitle(days)}
       description={
         multiple
-          ? `${days.length} days. These times replace anything already marked on them.`
-          : "When are you free on this day? Add as many times as you need."
+          ? `These times will replace what's already set on all ${days.length} days.`
+          : "When are you free? Add as many times as you like."
       }
       onClose={onClose}
     >
@@ -117,15 +117,13 @@ export function DayAvailabilityForm({
               type="button"
               aria-pressed={isPreset(preset.range)}
               onClick={() => setRanges([preset.range])}
-              className={`flex min-h-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-xl border px-2 py-2 text-sm font-medium transition-[background-color,border-color,color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] ${
-                isPreset(preset.range)
-                  ? "border-foreground bg-foreground text-background"
-                  : "border-border bg-card hover:bg-secondary"
+              className={`flex min-h-14 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg px-2 py-2 text-sm font-medium transition-[background-color,color,transform,outline-offset] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.97] ${
+                buttonVariants[isPreset(preset.range) ? "primary" : "secondary"]
               }`}
             >
               {preset.label}
               <span
-                className={`text-xs tabular-nums ${isPreset(preset.range) ? "text-background/70" : "text-muted-foreground"}`}
+                className={`text-xs font-normal tabular-nums ${isPreset(preset.range) ? "text-primary-foreground/70" : "text-muted-foreground"}`}
               >
                 {formatTimeRange(
                   dayjs().startOf("day").add(preset.range.start, "minute").valueOf(),
@@ -139,7 +137,7 @@ export function DayAvailabilityForm({
         <div className="flex flex-col gap-2">
           {ranges.length === 0 ? (
             <p className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground animate-in fade-in duration-200">
-              No times. Applying will clear {multiple ? "these days" : "this day"}.
+              No times yet. Applying will clear {multiple ? "these days" : "this day"}.
             </p>
           ) : (
             ranges.map((range, index) => (
@@ -183,7 +181,7 @@ export function DayAvailabilityForm({
             ))
           )}
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             className="self-start"
             disabled={!canAdd}
@@ -197,15 +195,15 @@ export function DayAvailabilityForm({
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center">
           {hasExisting && (
             <Button
-              variant="ghost"
-              className="text-destructive! hover:bg-destructive/10 sm:mr-auto"
+              variant="secondary"
+              className="text-destructive! sm:mr-auto"
               onClick={() => onApply([])}
             >
               {multiple ? "Clear these days" : "Clear day"}
             </Button>
           )}
           <div className="flex flex-col-reverse gap-2 sm:ml-auto sm:flex-row">
-            <Button variant="ghost" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" variant="primary">

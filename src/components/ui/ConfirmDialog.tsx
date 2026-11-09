@@ -34,7 +34,7 @@ export function ConfirmDialog({
         <div className="text-sm leading-relaxed text-muted-foreground">{children}</div>
         <ErrorText message={error} />
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="ghost" disabled={loading} onClick={cancel}>
+          <Button variant="secondary" disabled={loading} onClick={cancel}>
             Cancel
           </Button>
           <Button

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { CalendarPlus, Link2, Plus, Users } from "lucide-react";
+import { CalendarPlus, Link2, Plus, Sparkles, Users } from "lucide-react";
 import { messageFor } from "@/lib/errors";
 import { useEventByPublicId, useJoinEvent } from "@/features/event/queries";
 import { JoinEventForm } from "@/features/event/components/JoinEventForm";
@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { useCreateEvent, useEnsureGuestId } from "./queries.ts";
 import { JoinCodeForm } from "./components/JoinCodeForm";
 import { CreateEventModal } from "./components/CreateEventModal";
+import { AiPolicyModal } from "./components/AiPolicyModal";
 
 const STEPS = [
   { icon: CalendarPlus, label: "Create an event" },
@@ -25,6 +26,7 @@ export function HomePage() {
   const navigate = useNavigate();
   const [publicId, setPublicId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showAiPolicy, setShowAiPolicy] = useState(false);
 
   useEnsureGuestId();
 
@@ -51,9 +53,12 @@ export function HomePage() {
         </h1>
       </div>
 
-      <div className="mt-8 rounded-2xl border border-border bg-background p-5 shadow-[var(--shadow-soft)] animate-in fade-in slide-in-from-bottom-3 duration-500 sm:p-6">
+      <div className="mt-8 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] animate-in fade-in slide-in-from-bottom-3 duration-500 sm:p-6">
         {joining ? (
-          <div key="join" className="animate-in fade-in slide-in-from-right-3 duration-300">
+          <div
+            key="join"
+            className="animate-in fade-in slide-in-from-right-3 duration-300"
+          >
             <JoinEventForm
               eventName={eventQuery.data.name}
               loading={joinMutation.isPending}
@@ -102,7 +107,7 @@ export function HomePage() {
 
             <Button
               variant="secondary"
-              className="w-full border-0! bg-background! text-muted-foreground! shadow-[0_0_0_0_var(--background),0_0_0_1px_var(--input)] hover:text-foreground! hover:shadow-[0_0_0_1px_var(--background),0_0_0_2px_var(--input)]"
+              className="w-full"
               onClick={() => {
                 createMutation.reset();
                 setShowCreate(true);
@@ -124,10 +129,26 @@ export function HomePage() {
                 {index + 1}
               </span>
             </span>
-            <span className="text-xs leading-snug text-muted-foreground">{label}</span>
+            <span className="text-xs leading-snug text-muted-foreground">
+              {label}
+            </span>
           </li>
         ))}
       </ol>
+
+      <footer className="mt-auto flex justify-center pt-10 text-xs text-muted-foreground">
+        <button
+          type="button"
+          onClick={() => setShowAiPolicy(true)}
+          className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-lg px-2 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="underline decoration-border underline-offset-4">
+            How I use AI
+          </span>
+        </button>
+      </footer>
+
+      {showAiPolicy && <AiPolicyModal onClose={() => setShowAiPolicy(false)} />}
 
       {showCreate && (
         <CreateEventModal

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { ErrorText } from "@/components/ui/ErrorText";
 import { Field } from "@/components/ui/Field";
@@ -9,7 +9,8 @@ import {
   intervalLabel,
   type IntervalMinutes,
 } from "@/lib/intervals";
-import { timezoneOptions } from "@/lib/timezones";
+import { TimezonePicker } from "./TimezonePicker";
+import { timezoneShortName } from "@/lib/time";
 import {
   DAY_END_HOUR_OPTIONS,
   DAY_START_HOUR_OPTIONS,
@@ -44,17 +45,19 @@ export function EventSettingsModal({
   onClose,
   onSave,
 }: EventSettingsModalProps) {
-  const [selectedTimezone, setSelectedTimezone] = useState(timezone ?? "");
+  // Events created before timezones were recorded have none, which the API
+  // treats as UTC, so show that rather than a blank choice.
+  const initialTimezone = timezone ?? "UTC";
+  const [selectedTimezone, setSelectedTimezone] = useState(initialTimezone);
   const [selectedInterval, setSelectedInterval] = useState<IntervalMinutes>(
     intervalMinutes,
   );
   const [selectedStart, setSelectedStart] = useState(dayStartHour);
   const [selectedEnd, setSelectedEnd] = useState(dayEndHour);
-  const zones = useMemo(() => timezoneOptions(timezone), [timezone]);
   const windowValid = selectedStart < selectedEnd;
   const changed =
     selectedInterval !== intervalMinutes ||
-    selectedTimezone !== (timezone ?? "") ||
+    selectedTimezone !== initialTimezone ||
     selectedStart !== dayStartHour ||
     selectedEnd !== dayEndHour;
 
@@ -65,7 +68,7 @@ export function EventSettingsModal({
         onSubmit={(event) => {
           event.preventDefault();
           onSave({
-            timezone: selectedTimezone === "" ? null : selectedTimezone,
+            timezone: selectedTimezone,
             intervalMinutes: selectedInterval,
             dayStartHour: selectedStart,
             dayEndHour: selectedEnd,
@@ -74,7 +77,7 @@ export function EventSettingsModal({
       >
         <div role="radiogroup" aria-labelledby="event-interval-label" className="flex flex-col gap-1.5">
           <span id="event-interval-label" className="text-sm font-medium">
-            Time slot length
+            Time slots
           </span>
           <div className="grid grid-cols-3 gap-1 rounded-xl bg-secondary p-1">
             {INTERVAL_OPTIONS.map((option) => {
@@ -98,18 +101,25 @@ export function EventSettingsModal({
             })}
           </div>
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Sets the calendar grid. Availability people already shared stays as-is.
+            The smallest block of time people can pick.
           </p>
         </div>
 
+        <Field
+          label="Event timezone"
+          hint="Everyone still sees times in their own timezone."
+        >
+          <TimezonePicker value={selectedTimezone} onChange={setSelectedTimezone} />
+        </Field>
+
         <div role="group" aria-labelledby="event-window-label" className="flex flex-col gap-1.5">
           <span id="event-window-label" className="text-sm font-medium">
-            Calendar hours
+            Daily hours
           </span>
           <div className="flex items-center gap-2">
             <div className="min-w-0 flex-1">
               <SelectInput
-                aria-label="Calendar starts at"
+                aria-label="Day starts at"
                 value={selectedStart}
                 onChange={(event) => setSelectedStart(Number(event.target.value))}
               >
@@ -125,7 +135,7 @@ export function EventSettingsModal({
             </span>
             <div className="min-w-0 flex-1">
               <SelectInput
-                aria-label="Calendar ends at"
+                aria-label="Day ends at"
                 invalid={!windowValid}
                 value={selectedEnd}
                 onChange={(event) => setSelectedEnd(Number(event.target.value))}
@@ -140,35 +150,17 @@ export function EventSettingsModal({
           </div>
           {windowValid ? (
             <p className="text-xs leading-relaxed text-muted-foreground">
-              Hours shown on the calendar, in the timezone below (UTC when none is set).
-              Availability outside them is kept, just hidden.
+              The hours people can choose from ({timezoneShortName(selectedTimezone)}).
             </p>
           ) : (
-            <ErrorText message="The end time must be after the start time." />
+            <ErrorText message="Pick an end time after the start time." />
           )}
         </div>
-
-        <Field
-          label="Fallback timezone"
-          hint="Only used when a viewer's own timezone can't be detected."
-        >
-          <SelectInput
-            value={selectedTimezone}
-            onChange={(event) => setSelectedTimezone(event.target.value)}
-          >
-            <option value="">None — always use the viewer's timezone</option>
-            {zones.map((zone) => (
-              <option key={zone} value={zone}>
-                {zone.replace(/_/g, " ")}
-              </option>
-            ))}
-          </SelectInput>
-        </Field>
 
         <ErrorText message={error} />
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" loading={loading} disabled={!changed || !windowValid}>

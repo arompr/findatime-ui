@@ -21,12 +21,12 @@ export function MyEventsMenu() {
     <>
       <Button
         ref={setAnchor}
-        variant="ghost"
+        variant="secondary"
         size="sm"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
-        className="gap-1.5 text-foreground"
+        className="gap-1.5"
       >
         <CalendarDays className="size-4" aria-hidden />
         <span>Your events</span>

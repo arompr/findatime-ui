@@ -32,7 +32,6 @@
   --ring: #141413;
 
   --brand: #141413;
-  --brand-strong: #141413;
   --brand-foreground: #f9f5e9;
   --success: #2f7d55;
   /* Heat map: --success ("free") at four strengths over the card, so both
@@ -42,6 +41,7 @@
   --heat-3: color-mix(in oklab, var(--success) 34%, var(--card));
   --heat-4: color-mix(in oklab, var(--success) 48%, var(--card));
   --shadow-color: 40 30 10;
+  --overlay: rgb(20 20 19 / 0.45);
 
   color-scheme: light;
 }
@@ -68,10 +68,10 @@ html.dark {
   --ring: #efe4c9;
 
   --brand: #efe4c9;
-  --brand-strong: #efe4c9;
   --brand-foreground: #1f1e1d;
   --success: #7fcf9f;
   --shadow-color: 0 0 0;
+  --overlay: rgb(0 0 0 / 0.6);
 
   color-scheme: dark;
 }
@@ -97,9 +97,9 @@ html.dark {
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-brand: var(--brand);
-  --color-brand-strong: var(--brand-strong);
   --color-brand-foreground: var(--brand-foreground);
   --color-success: var(--success);
+  --color-overlay: var(--overlay);
 
   --font-sans: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Manrope", "Geist", ui-sans-serif, system-ui, sans-serif;

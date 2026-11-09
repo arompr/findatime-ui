@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { CalendarClock, Clock, Crown, Globe, LogOut, MoreHorizontal, Settings2, Trash2, UserRound } from "lucide-react";
+import { Clock, Globe, Crown, LogOut, MapPin, MoreHorizontal, Settings2, Trash2, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Menu, type MenuItem } from "@/components/ui/Menu";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { intervalLabel, type IntervalMinutes } from "@/lib/intervals";
+import { browserTimezone, timezonePlaceName } from "@/lib/time";
 import { ShareLinkButton } from "./ShareLinkButton";
 
 type EventHeaderProps = {
@@ -25,17 +26,7 @@ type EventHeaderProps = {
   onDelete: () => void;
 };
 
-function MetaChip({
-  icon,
-  children,
-  tooltip,
-  wide = false,
-}: {
-  icon: ReactNode;
-  children: ReactNode;
-  tooltip: string;
-  wide?: boolean;
-}) {
+function MetaChip({ icon, children, tooltip }: { icon: ReactNode; children: ReactNode; tooltip: ReactNode }) {
   return (
     <Tooltip content={tooltip}>
       <span
@@ -45,7 +36,7 @@ function MetaChip({
         <span className="shrink-0" aria-hidden>
           {icon}
         </span>
-        <span className={wide ? "max-w-[min(22rem,70vw)] truncate" : "max-w-40 truncate"}>{children}</span>
+        <span className="max-w-40 truncate">{children}</span>
       </span>
     </Tooltip>
   );
@@ -64,11 +55,12 @@ export function EventHeader({
   onLeave,
   onDelete,
 }: EventHeaderProps) {
+  const viewerTimezone = browserTimezone();
   const items: MenuItem[] = isOrganizer
     ? [
         {
           label: "Event settings",
-          description: "Slot length, hours, timezone",
+          description: "Timezone, hours, time slots",
           icon: <Settings2 className="size-4" />,
           onSelect: onOpenSettings,
         },
@@ -98,34 +90,26 @@ export function EventHeader({
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <MetaChip
             icon={isOrganizer ? <Crown className="size-3.5 text-brand" /> : <UserRound className="size-3.5" />}
-            tooltip={isOrganizer ? "You organize this event" : "The name others see for you"}
+            tooltip={isOrganizer ? "You organize this event" : "Your name in this event"}
           >
             {participantName}
             {isOrganizer && " · organizer"}
           </MetaChip>
-          <MetaChip
-            icon={<Clock className="size-3.5" />}
-            tooltip="Availability snaps to this slot length"
-          >
+          <MetaChip icon={<Clock className="size-3.5" />} tooltip="The smallest block of time you can pick">
             {intervalLabel(intervalMinutes)} slots
           </MetaChip>
           <MetaChip
-            icon={<CalendarClock className="size-3.5" />}
-            tooltip={
-              eventHoursLabel
-                ? "Hours shown on the calendar in your timezone, then the event's own hours"
-                : "Hours shown on the calendar, in your timezone"
-            }
-            wide={eventHoursLabel !== null}
+            icon={<MapPin className="size-3.5" />}
+            tooltip={`Times are shown in your timezone. The calendar runs ${hoursLabel}.`}
           >
-            {eventHoursLabel ? `${hoursLabel} your time · ${eventHoursLabel}` : hoursLabel}
+            {timezonePlaceName(viewerTimezone)} time
           </MetaChip>
-          {timezone && (
+          {eventHoursLabel && (
             <MetaChip
               icon={<Globe className="size-3.5" />}
-              tooltip="The event's timezone: its hours and slot grid are set here"
+              tooltip={`This event is set in ${timezonePlaceName(timezone ?? "UTC")} time, ${eventHoursLabel}.`}
             >
-              {timezone.replace(/_/g, " ")}
+              Event in {timezonePlaceName(timezone ?? "UTC")} time
             </MetaChip>
           )}
         </div>
@@ -137,12 +121,7 @@ export function EventHeader({
           items={items}
           trigger={(triggerProps) => (
             <Tooltip content="More options">
-              <Button
-                {...triggerProps}
-                variant="secondary"
-                size="icon"
-                aria-label="More options"
-              >
+              <Button {...triggerProps} variant="secondary" size="icon" aria-label="More options">
                 <MoreHorizontal className="size-4" aria-hidden />
               </Button>
             </Tooltip>

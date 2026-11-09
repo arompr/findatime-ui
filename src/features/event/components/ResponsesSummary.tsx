@@ -31,16 +31,22 @@ const MAX_AVATARS = 6;
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
-  const letters = parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : name.slice(0, 2);
+  const letters =
+    parts.length > 1
+      ? parts[0][0] + parts[parts.length - 1][0]
+      : name.slice(0, 2);
   return letters.toUpperCase();
 }
 
 function Avatar({ participant }: { participant: ParticipantStatus }) {
   const label = `${participant.isMe ? `${participant.name} (you)` : participant.name} · ${
-    participant.responded ? "shared availability" : "hasn't responded yet"
+    participant.responded ? "added their times" : "hasn't responded yet"
   }`;
   return (
-    <Tooltip content={label} className="relative -ml-1.5 first:ml-0 hover:z-10 focus-within:z-10">
+    <Tooltip
+      content={label}
+      className="relative -ml-1.5 first:ml-0 hover:z-10 focus-within:z-10"
+    >
       <span
         tabIndex={0}
         aria-label={label}
@@ -75,7 +81,9 @@ export function ResponsesSummary({
   onHighlightBestChange,
   onBestTimeClick,
 }: ResponsesSummaryProps) {
-  const responded = participants.filter((participant) => participant.responded).length;
+  const responded = participants.filter(
+    (participant) => participant.responded,
+  ).length;
   const shown = participants.slice(0, MAX_AVATARS);
   const hidden = participants.slice(MAX_AVATARS);
 
@@ -88,7 +96,12 @@ export function ResponsesSummary({
               <Avatar key={participant.id} participant={participant} />
             ))}
             {hidden.length > 0 && (
-              <Tooltip content={hidden.map((participant) => participant.name).join(", ")} className="-ml-1.5">
+              <Tooltip
+                content={hidden
+                  .map((participant) => participant.name)
+                  .join(", ")}
+                className="-ml-1.5"
+              >
                 <span
                   tabIndex={0}
                   className="inline-flex size-8 cursor-default items-center justify-center rounded-full border-2 border-card bg-secondary text-[11px] font-semibold text-muted-foreground"
@@ -109,7 +122,10 @@ export function ResponsesSummary({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           {highlightBest ? (
             <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="findatime-heat-4 size-3.5 rounded-[4px] border border-border" aria-hidden />
+              <span
+                className="findatime-heat-4 size-3.5 rounded-[4px] border border-border"
+                aria-hidden
+              />
               {freeLabel(peakCount, total)}
             </span>
           ) : (
@@ -136,14 +152,14 @@ export function ResponsesSummary({
               type="button"
               aria-pressed={highlightBest}
               onClick={() => onHighlightBestChange(!highlightBest)}
-              className={`inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97] ${
+              className={`inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-full border px-3 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card active:scale-[0.97] ${
                 highlightBest
                   ? "border-primary bg-primary text-primary-foreground hover:bg-primary/85"
-                  : "border-input bg-card text-foreground hover:bg-secondary"
+                  : "border-border bg-card text-muted-foreground hover:border-input hover:text-foreground"
               }`}
             >
               <Target className="size-3.5" aria-hidden />
-              Best times only
+              Find a time
             </button>
           )}
         </div>
@@ -153,10 +169,15 @@ export function ResponsesSummary({
         <div className="flex flex-wrap items-center gap-1.5 animate-in fade-in duration-300">
           <span className="mr-1 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Sparkles className="size-3.5 text-brand" aria-hidden />
-            {bestTimes[0].count >= total ? "Everyone's free" : "Most people free"}
+            {bestTimes[0].count >= total
+              ? "Everyone's free"
+              : "Most people free"}
           </span>
           {bestTimes.map((best) => (
-            <Tooltip key={best.startMs} content={`${freeLabel(best.count, total)} · tap to view`}>
+            <Tooltip
+              key={best.startMs}
+              content={`${freeLabel(best.count, total)} · show on calendar`}
+            >
               <button
                 type="button"
                 onClick={() => onBestTimeClick(best.startMs)}

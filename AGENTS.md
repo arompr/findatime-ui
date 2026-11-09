@@ -11,7 +11,7 @@
   participant, then the availability calendar: mark/edit your own availability
   (tap/click, drag-create, move/resize blocks), see everyone's overlap as a
   heat map, share the link, leave the event. Organizers additionally get event
-  settings (timezone fallback, slot interval, calendar hours) and event deletion.
+  settings (event timezone, slot interval, calendar hours) and event deletion.
 
 On desktop, month view is a day-level overview: each day is shaded by its peak
 overlap with a "best window" chip. In edit mode, clicking a day (or dragging
@@ -50,7 +50,7 @@ src/
     time.ts                 browserTimezone(), timezone short names, time/day formatters (dayjs utc/timezone)
     intervals.ts            Allowed slot intervals (15/30/60) + labels
     dayWindow.ts            Event day window (whole hours in the event timezone) -> browser-local minutes
-    timezones.ts            Selectable IANA timezone options
+    timezones.ts            Selectable IANA timezones + search metadata (TimezonePicker)
     availability.ts         In-memory draft store for calendar editing (external store)
     availability-density.ts Heat-map segments (overlap counts) + binary-search lookup
   features/home/
@@ -70,7 +70,7 @@ src/
     components/             Dumb components (EventHeader, AvailabilityBlock, AvailabilityActions,
                             CalendarHeader, ResponsesSummary, SlotDetails, DayDetails,
                             DayAvailabilityForm, MonthDayChip, JoinEventForm,
-                            ShareLinkButton, EventSettingsModal)
+                            ShareLinkButton, EventSettingsModal, TimezonePicker)
 ```
 
 ## Smart/dumb architecture
@@ -106,6 +106,13 @@ sent once, on join.
 - Tailwind utility classes only; keep styling sober and minimal. Use the semantic
   theme tokens from `index.css` (`bg-card`, `text-muted-foreground`, `border-border`,
   `bg-brand`, …), never raw palette colors, so light and dark themes both work.
+- Buttons: `primary` (solid ink) for the one main action in a view; every other
+  text button is `secondary` (hairline outline that lifts on hover); `ghost` only
+  for icon-only buttons. Custom tiles reuse `buttonVariants` from `Button.tsx`
+  instead of hand-rolled styles. View toggles and filters that sit among data
+  (e.g. "Find a time") are pill chips, solid ink when on, not buttons.
+- Copy is for non-technical guests: say what something does for them, not how
+  it works (no "grid", "snaps", "slot length").
 - Mobile-first: design for <640px first, extend with `sm:` variants; touch
   targets >= 40px; don't rely on hover (use `[@media(hover:none)]:` fallbacks).
 - No comments unless they clarify non-obvious behavior.

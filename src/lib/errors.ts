@@ -47,14 +47,14 @@ const BY_ERROR_CODE: Record<string, string> = {
   event_not_found: "No event found with that code.",
   participant_already_joined: "You've already joined this event.",
   participant_not_found: "You haven't joined this event yet.",
-  invalid_passcode: "This event is passcode-protected and can't be joined from here yet.",
+  invalid_passcode: "This event needs a passcode, which isn't supported yet.",
   organizer_cannot_leave: "The organizer can't leave their own event.",
   forbidden: "You don't have permission to do that.",
   invalid_availability_range:
-    "Some of those times don't exist in your timezone (daylight saving changes). Adjust them and try again.",
-  invalid_timezone: "That timezone isn't supported. Choose another one.",
-  invalid_interval: "Choose a 15, 30, or 60 minute interval.",
-  invalid_day_window: "The calendar must start before it ends, in whole hours.",
+    "Some of those times are skipped by a daylight saving change. Adjust them and try again.",
+  invalid_timezone: "That timezone isn't supported. Pick another one.",
+  invalid_interval: "Pick 15 min, 30 min, or 1 hour time slots.",
+  invalid_day_window: "Pick an end time after the start time.",
 };
 
 export function messageFor(error: unknown, fallback: string): string {

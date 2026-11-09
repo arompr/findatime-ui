@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import dayjs from "dayjs";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarX2 } from "lucide-react";
+import { buttonVariants } from "@/components/ui/Button";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { isNotJoined, messageFor } from "@/lib/errors";
 import { toIntervalMinutes } from "@/lib/intervals";
@@ -56,7 +57,7 @@ function Notice({ title, children }: { title: string; children?: ReactNode }) {
       {children && <p className="mt-2 text-sm text-muted-foreground">{children}</p>}
       <Link
         to="/"
-        className="mt-6 inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium underline-offset-4 hover:underline"
+        className={`mt-6 inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-medium transition-[color,outline-offset] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:min-h-10 ${buttonVariants.secondary}`}
       >
         Go to the home page
       </Link>

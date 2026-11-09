@@ -59,7 +59,7 @@ export type SetAvailabilityParams = {
 
 export type UpdateEventParamsInput = {
   publicId: string;
-  /** Null disables the event timezone fallback. */
+  /** The event's anchor timezone; null means UTC (legacy events). */
   timezone: string | null;
   intervalMinutes: number;
   /** Whole hours in the event's anchor frame; start < end. */
@@ -86,6 +86,8 @@ export function createEvent({
         guestId: getGuestId(),
         organizerName,
         isPasscodeProtected: false,
+        // The creator's timezone anchors the event's hours and slot grid.
+        timezone: browserTimezone(),
       },
     }),
   );
@@ -121,7 +123,7 @@ export function joinEvent({
         passcode: null,
         guestId: getGuestId(),
         participantName,
-        // The only place a participant's timezone is recorded.
+        // Recorded for future use; the API doesn't read it yet.
         timezone: browserTimezone(),
       },
     }),
