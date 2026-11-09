@@ -221,7 +221,13 @@ export function AvailabilityCalendar({
   const [justSaved, setJustSaved] = useState(false);
   const [highlightBest, setHighlightBest] = useState(false);
   const [inspection, setInspection] = useState<SlotInspection | null>(null);
-  const [calendarView, setCalendarView] = useState<string>(isMobile ? "day" : "week");
+  const defaultView = isMobile ? "day" : "week";
+  // The calendar remounts with defaultView when the breakpoint flips, so the
+  // tracked view is only valid for the breakpoint it was set under. Deriving it
+  // (rather than resetting in an effect) keeps the remount from reading a stale
+  // view, e.g. a desktop calendar opening in the phone-only day view.
+  const [viewState, setViewState] = useState({ mobile: isMobile, view: defaultView });
+  const calendarView = viewState.mobile === isMobile ? viewState.view : defaultView;
   const navigatorRef = useRef<CalendarControls | null>(null);
   const lastPointerTypeRef = useRef<string>("mouse");
   const hoverTimerRef = useRef<number | null>(null);
@@ -272,11 +278,6 @@ export function AvailabilityCalendar({
     },
     [],
   );
-
-  // The calendar remounts (fresh initialView) when the breakpoint flips.
-  useEffect(() => {
-    setCalendarView(isMobile ? "day" : "week");
-  }, [isMobile]);
 
   const isMonth = calendarView === "month";
 
@@ -405,11 +406,14 @@ export function AvailabilityCalendar({
     navigatorRef.current?.openEventForm({ start, end: start.add(1, "day"), allDay: true });
   }, []);
 
-  const handleViewChange = useCallback((view: string) => {
-    setCalendarView(view);
-    setSelectedId(null);
-    setInspection(null);
-  }, []);
+  const handleViewChange = useCallback(
+    (view: string) => {
+      setViewState({ mobile: isMobile, view });
+      setSelectedId(null);
+      setInspection(null);
+    },
+    [isMobile],
+  );
 
   const handleSelectBlock = useCallback((id: string) => {
     if (blockGestureJustEnded()) return;
@@ -768,7 +772,7 @@ export function AvailabilityCalendar({
             dayMaxEvents={MONTH_MAX_EVENTS}
             eventHeight={MONTH_EVENT_HEIGHT}
             headerComponent={<CalendarHeader markedDays={markedDays} />}
-            initialView={calendarView}
+            initialView={defaultView}
             firstDayOfWeek="monday"
             slotDuration={intervalMinutes}
             timeFormat="12-hour"

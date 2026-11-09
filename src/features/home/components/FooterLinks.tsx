@@ -88,6 +88,19 @@ export function FooterLinks() {
           I'm a terrible UX/UI designer, and I wanted Findatime to feel great to
           use (especially on mobile).
         </p>
+        <p>
+          If that's a dealbreaker, feel free to use the OG that inspired this
+          project:{" "}
+          <a
+            href="https://www.when2meet.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-foreground underline decoration-border underline-offset-4 transition-colors hover:decoration-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            When2meet
+          </a>
+          .
+        </p>
       </FooterCard>
       <span aria-hidden className="text-border">
         ·
