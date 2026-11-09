@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { CalendarPlus, Link2, Plus, Sparkles, Users } from "lucide-react";
+import { CalendarPlus, Link2, Plus, Users } from "lucide-react";
 import { messageFor } from "@/lib/errors";
 import { useEventByPublicId, useJoinEvent } from "@/features/event/queries";
 import { JoinEventForm } from "@/features/event/components/JoinEventForm";
