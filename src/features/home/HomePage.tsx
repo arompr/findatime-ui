@@ -5,7 +5,7 @@ import { messageFor } from "@/lib/errors";
 import { useEventByPublicId, useJoinEvent } from "@/features/event/queries";
 import { JoinEventForm } from "@/features/event/components/JoinEventForm";
 import { Button } from "@/components/ui/Button";
-import { useCreateEvent, useEnsureGuestId } from "./queries.ts";
+import { useCreateEvent } from "./queries.ts";
 import { JoinCodeForm } from "./components/JoinCodeForm";
 import { CreateEventModal } from "./components/CreateEventModal";
 import { FooterLinks } from "./components/FooterLinks";
@@ -26,8 +26,6 @@ export function HomePage() {
   const navigate = useNavigate();
   const [publicId, setPublicId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
-
-  useEnsureGuestId();
 
   const eventQuery = useEventByPublicId(publicId);
   const createMutation = useCreateEvent();

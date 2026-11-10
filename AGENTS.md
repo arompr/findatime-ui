@@ -49,7 +49,8 @@ src/
   lib/
     api.ts                  hey-api client config + endpoint wrappers (unwraps, throws ApiRequestError)
     errors.ts               ApiRequestError + API error-code -> user message mapping
-    guestId.ts              Stable per-browser UUID in localStorage
+    guestToken.ts           Per-browser guest token (issued by POST /guests, kept in localStorage;
+                            exchanges the legacy findatime.guestId once)
     time.ts                 browserTimezone(), timezone short names, time/day formatters (dayjs utc/timezone)
     intervals.ts            Allowed slot intervals (15/30/60) + labels
     dayWindow.ts            Event day window (whole hours in the event timezone) -> browser-local minutes
@@ -59,7 +60,7 @@ src/
   features/home/
     HomePage.tsx            Smart: join-by-code flow, create modal
     MyEventsMenu.tsx        Smart: "Your events" popover in the app header
-    queries.ts              TanStack Query hooks (my events, create event, guestId)
+    queries.ts              TanStack Query hooks (my events, create event)
     components/             Dumb components (JoinCodeForm, CreateEventModal, MyEventsList,
                             FooterLinks)
   features/event/
@@ -89,8 +90,12 @@ src/
 ## API access
 
 All API calls go through `src/lib/api.ts`, which configures the hey-api
-`client` (baseUrl from `VITE_API_URL`, default `http://localhost:5263`; global
-`X-Guest-Id` header from `guestId.ts`) and exposes one function per endpoint.
+`client` (baseUrl from `VITE_API_URL`, default `http://localhost:5263`) and
+exposes one function per endpoint. Identity is a guest token from
+`guestToken.ts`: the client's `auth` callback sends `Authorization: Guest <token>`
+on the operations the OpenAPI document marks as secured, issuing the token on
+first use. The guest is never named in bodies or URLs. A 401 drops the token
+and retries once with a fresh one.
 The client returns `{ data, error, response }` envelopes; `unwrap` turns
 failures into `ApiRequestError` (status + API error code) so TanStack Query
 `isError` and `messageFor` (in `errors.ts`) drive the UI. Endpoints take the
