@@ -11,19 +11,21 @@ import {
   type UpdateEventParamsResponse,
 } from "@arompr/findatime-typescript-client";
 import { ApiRequestError } from "./errors";
-import { getGuestId } from "./guestId";
+import { getGuestToken, resetGuestToken } from "./guestToken";
 import { browserTimezone } from "./time";
+
+const AUTH_SCHEME = "Guest ";
 
 client.setConfig({
   baseUrl: import.meta.env.VITE_API_URL ?? "http://localhost:5263",
-  // Guest identity for the endpoints that resolve "me" from a header
-  // (getMyParticipant, setAvailability).
-  headers: { "X-Guest-Id": getGuestId() },
+  // Only sent on operations the API marks as authenticated.
+  auth: async () => `${AUTH_SCHEME}${await getGuestToken()}`,
 });
 
 type Envelope<T> = {
   data?: T;
   error?: unknown;
+  request?: Request;
   response?: Response;
 };
 
@@ -31,9 +33,17 @@ type Envelope<T> = {
  * The client returns `{ data, error, response }` instead of throwing; unwrap it
  * so callers (TanStack Query) get plain promises that reject with
  * ApiRequestError on failure.
+ *
+ * A 401 means the API doesn't know this browser's token (e.g. its database was
+ * reset): drop the token and retry once with a freshly issued one.
  */
-async function unwrap<T>(result: Promise<Envelope<T>>): Promise<T> {
-  const { data, error, response } = await result;
+async function unwrap<T>(call: () => Promise<Envelope<T>>): Promise<T> {
+  let { data, error, request, response } = await call();
+  const sentToken = request?.headers.get("Authorization")?.slice(AUTH_SCHEME.length);
+  if (response?.status === 401 && sentToken) {
+    resetGuestToken(sentToken);
+    ({ data, error, response } = await call());
+  }
   if (!response?.ok) {
     throw ApiRequestError.from(error, response);
   }
@@ -68,22 +78,21 @@ export type UpdateEventParamsInput = {
 };
 
 export function getEvent(publicId: string): Promise<GetEventResponse> {
-  return unwrap(FindAtimeApi.getEvent({ path: { publicId } }));
+  return unwrap(() => FindAtimeApi.getEvent({ path: { publicId } }));
 }
 
-export function searchEvents(guestId: string): Promise<SearchEventsResponse> {
-  return unwrap(FindAtimeApi.searchEvents({ query: { guestId } }));
+export function searchEvents(): Promise<SearchEventsResponse> {
+  return unwrap(() => FindAtimeApi.searchEvents());
 }
 
 export function createEvent({
   name,
   organizerName,
 }: CreateEventParams): Promise<CreateEventResponse> {
-  return unwrap(
+  return unwrap(() =>
     FindAtimeApi.createEvent({
       body: {
         name,
-        guestId: getGuestId(),
         organizerName,
         isPasscodeProtected: false,
         // The creator's timezone anchors the event's hours and slot grid.
@@ -94,7 +103,7 @@ export function createEvent({
 }
 
 export function deleteEvent(publicId: string): Promise<void> {
-  return unwrap<void>(FindAtimeApi.deleteEvent({ path: { publicId } }));
+  return unwrap<void>(() => FindAtimeApi.deleteEvent({ path: { publicId } }));
 }
 
 export function updateEventParams({
@@ -104,7 +113,7 @@ export function updateEventParams({
   dayStartHour,
   dayEndHour,
 }: UpdateEventParamsInput): Promise<UpdateEventParamsResponse> {
-  return unwrap(
+  return unwrap(() =>
     FindAtimeApi.updateEventParams({
       path: { publicId },
       body: { timezone, intervalMinutes, dayStartHour, dayEndHour },
@@ -116,12 +125,11 @@ export function joinEvent({
   publicId,
   participantName,
 }: JoinEventParams): Promise<JoinEventResponse> {
-  return unwrap(
+  return unwrap(() =>
     FindAtimeApi.joinEvent({
       path: { publicId },
       body: {
         passcode: null,
-        guestId: getGuestId(),
         participantName,
         // Recorded for future use; the API doesn't read it yet.
         timezone: browserTimezone(),
@@ -131,24 +139,19 @@ export function joinEvent({
 }
 
 export function leaveEvent(publicId: string): Promise<void> {
-  return unwrap<void>(
-    FindAtimeApi.leaveEvent({
-      path: { publicId },
-      body: { guestId: getGuestId() },
-    }),
-  );
+  return unwrap<void>(() => FindAtimeApi.leaveEvent({ path: { publicId } }));
 }
 
 export function getMyParticipant(
   publicId: string,
 ): Promise<GetMyParticipantResponse> {
-  return unwrap(FindAtimeApi.getMyParticipant({ path: { publicId } }));
+  return unwrap(() => FindAtimeApi.getMyParticipant({ path: { publicId } }));
 }
 
 export function getEventAvailabilities(
   publicId: string,
 ): Promise<GetEventAvailabilitiesResponse> {
-  return unwrap(FindAtimeApi.getEventAvailabilities({ path: { publicId } }));
+  return unwrap(() => FindAtimeApi.getEventAvailabilities({ path: { publicId } }));
 }
 
 export function setAvailability({
@@ -156,7 +159,7 @@ export function setAvailability({
   participantId,
   ranges,
 }: SetAvailabilityParams): Promise<SetAvailabilityResponse> {
-  return unwrap(
+  return unwrap(() =>
     FindAtimeApi.setAvailability({
       path: { publicId, participantId },
       body: { ranges },

@@ -55,6 +55,8 @@ const BY_ERROR_CODE: Record<string, string> = {
   invalid_timezone: "That timezone isn't supported. Pick another one.",
   invalid_interval: "Pick 15 min, 30 min, or 1 hour time slots.",
   invalid_day_window: "Pick an end time after the start time.",
+  unauthorized: "We couldn't recognize this browser. Reload the page and try again.",
+  rate_limited: "Too many attempts. Wait a minute and try again.",
 };
 
 export function messageFor(error: unknown, fallback: string): string {

@@ -13,7 +13,6 @@ import {
 } from "@/lib/api";
 import type { AvailabilityRange } from "@/lib/availability";
 import { clearSelections } from "@/lib/availability";
-import { getGuestId } from "@/lib/guestId";
 import type { IntervalMinutes } from "@/lib/intervals";
 import dayjs from "dayjs";
 
@@ -21,7 +20,7 @@ export const eventKeys = {
   all: ["events"] as const,
   byPublicId: (publicId: string | null) =>
     [...eventKeys.all, "publicId", publicId] as const,
-  mine: (guestId: string) => [...eventKeys.all, "mine", guestId] as const,
+  mine: () => [...eventKeys.all, "mine"] as const,
 };
 
 export const participantKeys = {
@@ -68,10 +67,9 @@ export function useMyParticipant(publicId: string) {
  * cached by the home page) and picks out this event.
  */
 export function useIsOrganizer(publicId: string) {
-  const guestId = getGuestId();
   return useQuery({
-    queryKey: eventKeys.mine(guestId),
-    queryFn: () => searchEvents(guestId),
+    queryKey: eventKeys.mine(),
+    queryFn: searchEvents,
     select: (data) =>
       data.events.some((event) => event.publicId === publicId && event.isOrganizer),
   });
@@ -141,7 +139,7 @@ export function useDeleteEvent() {
       queryClient.removeQueries({ queryKey: eventKeys.byPublicId(publicId) });
       queryClient.removeQueries({ queryKey: participantKeys.mine(publicId) });
       queryClient.removeQueries({ queryKey: availabilityKeys.forEvent(publicId) });
-      void queryClient.invalidateQueries({ queryKey: eventKeys.mine(getGuestId()) });
+      void queryClient.invalidateQueries({ queryKey: eventKeys.mine() });
     },
   });
 }

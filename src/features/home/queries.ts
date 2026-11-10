@@ -1,19 +1,11 @@
-import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createEvent, searchEvents } from "@/lib/api";
-import { getGuestId } from "@/lib/guestId";
 import { eventKeys } from "@/features/event/queries";
-
-export function useEnsureGuestId() {
-  useEffect(() => {
-    getGuestId();
-  }, []);
-}
 
 export function useMyEvents() {
   return useQuery({
-    queryKey: eventKeys.mine(getGuestId()),
-    queryFn: () => searchEvents(getGuestId()),
+    queryKey: eventKeys.mine(),
+    queryFn: searchEvents,
   });
 }
 
